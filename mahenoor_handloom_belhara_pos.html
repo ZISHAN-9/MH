@@ -1,0 +1,2546 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mahenoor Handloom ERP - Belhara Branch</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fonts: Inter & Hind for crisp corporate Hindi + English UI -->
+    <link href="https://fonts.googleapis.com/css2?family=Hind:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome 6 Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- html2canvas & jsPDF for crisp Hindi + English PDF Invoice Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', 'Hind', sans-serif;
+            background-color: #f1f5f9;
+            color: #0f172a;
+            -webkit-tap-highlight-color: transparent;
+            padding-bottom: 88px; /* Space for 5-tab mobile bottom nav */
+        }
+        .num-font {
+            font-family: 'Inter', sans-serif;
+            font-variant-numeric: tabular-nums;
+        }
+        /* Hide scrollbars on horizontal filter pills */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Active press feedback for mobile touch */
+        .touch-btn:active {
+            transform: scale(0.97);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- ========================================== -->
+    <!-- CORPORATE STICKY TOP APP BAR               -->
+    <!-- ========================================== -->
+    <header class="bg-slate-900 text-white sticky top-0 z-30 shadow-md border-b border-slate-800">
+        <div class="max-w-4xl mx-auto px-3.5 py-2.5 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center font-extrabold text-base tracking-tighter text-white shadow-inner">
+                    MH
+                </div>
+                <div>
+                    <div class="flex items-center gap-1.5">
+                        <h1 class="text-sm sm:text-base font-bold tracking-tight text-white leading-none">
+                            MAHENOOR HANDLOOM
+                        </h1>
+                        <span class="bg-slate-800 text-emerald-400 text-[10px] font-semibold px-2 py-0.5 rounded border border-slate-700">
+                            BELHARA
+                        </span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-0.5" id="topHeaderSubtitle">
+                        मेन मार्केट, बेलहरा • रिटेल पीओएस व हिसाब
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right Quick Actions: Voice Toggle & Settings -->
+            <div class="flex items-center gap-2">
+                <button onclick="toggleVoiceReadout()" id="voiceToggleBtn" class="h-9 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 flex items-center gap-1.5 border border-slate-700 text-xs font-bold touch-btn" title="आवाज ऑन/ऑफ करें">
+                    <i id="voiceToggleIcon" class="fa-solid fa-volume-high"></i>
+                    <span class="hidden sm:inline" id="voiceToggleText">आवाज ON</span>
+                </button>
+
+                <button onclick="openSettingsModal()" class="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center border border-slate-700 touch-btn" title="दुकान सेटिंग्स और डेटा बैकअप">
+                    <i class="fa-solid fa-sliders text-sm"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Edit Mode Indicator Banner (Appears when editing an existing bill) -->
+        <div id="editingBillBanner" class="hidden bg-amber-500 text-slate-950 px-3.5 py-2 text-xs font-bold border-t border-amber-400">
+            <div class="max-w-4xl mx-auto flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation text-sm"></i>
+                    <span id="editingBillBannerText">⚠️ आप बिल #101 में सुधार कर रहे हैं (सेव करने पर ही स्टॉक बदलेगा)</span>
+                </div>
+                <button onclick="cancelBillEditMode()" class="bg-slate-900 text-white px-2.5 py-1 rounded-md text-[11px] font-bold hover:bg-slate-800 shrink-0 touch-btn">
+                    रद्द करें (Cancel)
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ========================================== -->
+    <!-- MAIN MOBILE-FIRST WORKSPACE                -->
+    <!-- ========================================== -->
+    <main class="flex-1 max-w-4xl w-full mx-auto px-3 sm:px-4 pt-3 pb-20">
+
+        <!-- ========================================== -->
+        <!-- TAB 1: POS BILLING (बिलिंग)                 -->
+        <!-- ========================================== -->
+        <section id="view-pos" class="space-y-3">
+            
+            <!-- Search & Quick Add Product Bar -->
+            <div class="flex gap-2">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                    <input type="text" id="posSearch" oninput="renderPOSGrid()" placeholder="आइटम खोजें (Search item name)..." class="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs">
+                </div>
+                <button onclick="openProductModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs sm:text-sm flex items-center gap-1.5 shrink-0 shadow-xs touch-btn">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>नया सामान</span>
+                </button>
+            </div>
+
+            <!-- Category Filter Pills -->
+            <div id="posCategoryPills" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                <!-- Dynamically populated -->
+            </div>
+
+            <!-- Products Grid (Or Clean Empty State if 0 Stock) -->
+            <div id="posProductsContainer">
+                <!-- Dynamically populated -->
+            </div>
+
+            <!-- Floating Sticky Cart Bar (Appears when cart has items) -->
+            <div id="floatingCartBar" class="fixed bottom-[70px] left-0 right-0 z-20 px-3 hidden">
+                <div class="max-w-4xl mx-auto bg-slate-900 text-white rounded-2xl p-3 shadow-2xl border border-slate-700 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-extrabold num-font text-base shadow-inner" id="floatCartCount">
+                            0
+                        </div>
+                        <div>
+                            <p class="text-[11px] text-slate-400 font-medium uppercase tracking-wider">कुल बिल राशि (Total)</p>
+                            <p class="text-lg font-extrabold num-font text-emerald-400 leading-tight" id="floatCartTotal">₹0</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="clearCart()" class="px-2.5 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-950 text-rose-400 border border-slate-700 text-xs font-semibold touch-btn" title="खाली करें">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                        <button onclick="openCheckoutSheet()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs sm:text-sm flex items-center gap-2 shadow-md touch-btn">
+                            <span>बिल आगे बढ़ाएं</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: STOCK INVENTORY (स्टॉक मैनेजमेंट)    -->
+        <!-- ========================================== -->
+        <section id="view-stock" class="hidden space-y-3">
+            
+            <!-- Stock Overview Bar -->
+            <div class="bg-white rounded-xl p-3.5 border border-slate-200 shadow-2xs flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+                <div class="grid grid-cols-3 gap-2 flex-1 w-full">
+                    <div>
+                        <span class="text-[11px] text-slate-500 font-medium block">कुल आइटम</span>
+                        <span class="text-base sm:text-lg font-bold num-font text-slate-900" id="stockSummaryCount">0</span>
+                    </div>
+                    <div class="border-x border-slate-100 px-2.5">
+                        <span class="text-[11px] text-slate-500 font-medium block">स्टॉक लागत (Cost)</span>
+                        <span class="text-base sm:text-lg font-bold num-font text-blue-700" id="stockSummaryValue">₹0</span>
+                    </div>
+                    <div>
+                        <span class="text-[11px] text-slate-500 font-medium block">कम स्टॉक (Low)</span>
+                        <span class="text-base sm:text-lg font-bold num-font text-rose-600" id="stockSummaryLow">0</span>
+                    </div>
+                </div>
+                <button onclick="openProductModal()" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-xs touch-btn shrink-0">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>+ नया सामान जोड़ें</span>
+                </button>
+            </div>
+
+            <!-- Search Stock -->
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                <input type="text" id="stockSearch" oninput="renderStockList()" placeholder="गोदाम में आइटम या कैटेगरी खोजें..." class="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600">
+            </div>
+
+            <!-- Stock Items List -->
+            <div id="stockListContainer" class="space-y-2.5">
+                <!-- Dynamically populated -->
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 3: EXPENSES MODULE (दुकान खर्च - NEW)    -->
+        <!-- ========================================== -->
+        <section id="view-expenses" class="hidden space-y-3">
+            
+            <!-- Expense Summary Header Card -->
+            <div class="bg-white rounded-xl p-3.5 border border-slate-200 shadow-2xs flex items-center justify-between gap-2">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center text-lg shrink-0">
+                        <i class="fa-solid fa-wallet"></i>
+                    </div>
+                    <div>
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block" id="expenseSummaryLabel">दिखाए गए खर्च का योग</span>
+                        <span class="text-xl font-extrabold num-font text-rose-600" id="expenseSummaryTotal">₹0</span>
+                    </div>
+                </div>
+                <button onclick="openExpenseModal()" class="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs sm:text-sm flex items-center gap-1.5 shadow-sm touch-btn shrink-0">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>+ नया खर्च लिखें</span>
+                </button>
+            </div>
+
+            <!-- Filter Bar: Today vs All Expenses -->
+            <div class="bg-white rounded-xl p-2 border border-slate-200 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-1 flex-1">
+                    <button onclick="setExpenseFilter('today')" id="expFilterBtn-today" class="flex-1 py-2 rounded-lg text-xs font-bold bg-slate-900 text-white">
+                        आज के खर्च (Today)
+                    </button>
+                    <button onclick="setExpenseFilter('all')" id="expFilterBtn-all" class="flex-1 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                        सभी खर्च (All Expenses)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick 1-Tap Expense Entry Chips -->
+            <div class="bg-white rounded-xl p-3 border border-slate-200 shadow-2xs">
+                <p class="text-[11px] font-bold text-slate-500 mb-2 flex items-center gap-1.5">
+                    <i class="fa-solid fa-bolt text-amber-500"></i>
+                    <span>तेज़ एंट्री: किसी भी खर्च पर टच करके तुरंत रकम लिखें</span>
+                </p>
+                <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                    <button onclick="openExpenseModal(null, '☕ चाय-नाश्ता')" class="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-rose-50 border border-slate-200 text-xs font-semibold text-slate-700 shrink-0 touch-btn">☕ चाय-नाश्ता</button>
+                    <button onclick="openExpenseModal(null, '🛺 भाड़ा / ट्रांसपोर्ट')" class="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-rose-50 border border-slate-200 text-xs font-semibold text-slate-700 shrink-0 touch-btn">🛺 भाड़ा / ट्रांसपोर्ट</button>
+                    <button onclick="openExpenseModal(null, '💡 बिजली / रिचार्ज')" class="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-rose-50 border border-slate-200 text-xs font-semibold text-slate-700 shrink-0 touch-btn">💡 बिजली / रिचार्ज</button>
+                    <button onclick="openExpenseModal(null, '👷 लड़के / मजदूरी')" class="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-rose-50 border border-slate-200 text-xs font-semibold text-slate-700 shrink-0 touch-btn">👷 लड़के / मजदूरी</button>
+                    <button onclick="openExpenseModal(null, '🏪 दुकान खर्च / किराया')" class="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-rose-50 border border-slate-200 text-xs font-semibold text-slate-700 shrink-0 touch-btn">🏪 दुकान खर्च / किराया</button>
+                    <button onclick="openExpenseModal(null, '📦 पन्नी / पैकिंग')" class="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-rose-50 border border-slate-200 text-xs font-semibold text-slate-700 shrink-0 touch-btn">📦 पन्नी / पैकिंग</button>
+                    <button onclick="openExpenseModal(null, '📝 अन्य खर्च')" class="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-rose-50 border border-slate-200 text-xs font-semibold text-slate-700 shrink-0 touch-btn">📝 अन्य खर्च</button>
+                </div>
+            </div>
+
+            <!-- Expenses List Container -->
+            <div id="expensesListContainer" class="space-y-2.5">
+                <!-- Dynamically populated -->
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 4: BILLS HISTORY & PDF (सभी बिल)        -->
+        <!-- ========================================== -->
+        <section id="view-bills" class="hidden space-y-3">
+            
+            <!-- Filter & Search Bills -->
+            <div class="bg-white rounded-xl p-3 border border-slate-200 shadow-2xs space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-sm sm:text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-file-invoice text-blue-600"></i>
+                        <span>काटे गए बिल (Invoices History)</span>
+                    </h2>
+                    <span class="text-xs font-semibold text-slate-500 num-font" id="totalBillsCountBadge">0 Bills</span>
+                </div>
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                    <input type="text" id="billSearchInput" oninput="renderBillsList()" placeholder="ग्राहक का नाम, मोबाइल नंबर या बिल नं खोजें..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600">
+                </div>
+            </div>
+
+            <!-- Bills List Container -->
+            <div id="billsListContainer" class="space-y-2.5">
+                <!-- Dynamically populated -->
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 5: PROFIT, GALLA & REPORTS (हिसाब)      -->
+        <!-- ========================================== -->
+        <section id="view-profit" class="hidden space-y-3.5">
+            
+            <!-- Date Filter Bar: Today, Yesterday, Month, All -->
+            <div class="bg-white rounded-xl p-2 border border-slate-200 flex items-center justify-between gap-1">
+                <div class="grid grid-cols-4 gap-1 flex-1">
+                    <button onclick="setProfitFilter('today')" id="profFilter-today" class="prof-filter-btn py-2 rounded-lg text-xs font-bold bg-slate-900 text-white">
+                        आज (Today)
+                    </button>
+                    <button onclick="setProfitFilter('yesterday')" id="profFilter-yesterday" class="prof-filter-btn py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                        कल (Yest)
+                    </button>
+                    <button onclick="setProfitFilter('month')" id="profFilter-month" class="prof-filter-btn py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                        इस महीने
+                    </button>
+                    <button onclick="setProfitFilter('all')" id="profFilter-all" class="prof-filter-btn py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                        कुल (All)
+                    </button>
+                </div>
+                <button onclick="toggleProfitPrivacy()" class="px-2.5 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-semibold flex items-center" title="मुनाफा छुपाएं/दिखाएं">
+                    <i id="profitEyeIcon" class="fa-solid fa-eye"></i>
+                </button>
+            </div>
+
+            <!-- 5 Crystal-Clear Financial Cards -->
+            <div class="grid grid-cols-2 gap-2.5">
+                <!-- 1. Total Sales Revenue -->
+                <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                    <div class="flex items-center justify-between text-xs mb-1">
+                        <span class="font-bold text-slate-500">1. कुल बिक्री (Sales)</span>
+                        <i class="fa-solid fa-bag-shopping text-blue-600"></i>
+                    </div>
+                    <p class="text-xl sm:text-2xl font-extrabold num-font text-slate-900" id="statTotalSales">₹0</p>
+                    <p class="text-[11px] text-slate-500 mt-1 num-font" id="statTotalBillsCount">0 बिल कटे</p>
+                </div>
+
+                <!-- 2. Gross Profit (Margin on Goods) -->
+                <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                    <div class="flex items-center justify-between text-xs mb-1">
+                        <span class="font-bold text-slate-500">2. माल पर मुनाफा</span>
+                        <i class="fa-solid fa-tags text-emerald-600"></i>
+                    </div>
+                    <p class="text-xl sm:text-2xl font-extrabold num-font text-emerald-700" id="statGrossProfit">₹0</p>
+                    <p class="text-[11px] text-slate-500 mt-1 num-font" id="statCostOfGoods">लागत: ₹0</p>
+                </div>
+
+                <!-- 3. Total Shop Expenses (Rose Highlight) -->
+                <div class="bg-rose-50/70 p-3.5 rounded-xl border border-rose-200 shadow-2xs">
+                    <div class="flex items-center justify-between text-xs mb-1">
+                        <span class="font-bold text-rose-800">3. कुल दुकान खर्च</span>
+                        <i class="fa-solid fa-receipt text-rose-600"></i>
+                    </div>
+                    <p class="text-xl sm:text-2xl font-extrabold num-font text-rose-600" id="statTotalExpenses">-₹0</p>
+                    <p class="text-[11px] text-rose-700/80 mt-1 num-font" id="statExpenseCount">0 खर्च एंट्री</p>
+                </div>
+
+                <!-- 4. True Net Profit (Gross Profit - Expenses) -->
+                <div class="bg-emerald-900 text-white p-3.5 rounded-xl border border-emerald-800 shadow-2xs">
+                    <div class="flex items-center justify-between text-xs mb-1">
+                        <span class="font-bold text-emerald-200">4. असली शुद्ध मुनाफा</span>
+                        <i class="fa-solid fa-chart-line text-emerald-400"></i>
+                    </div>
+                    <p class="text-xl sm:text-2xl font-extrabold num-font text-emerald-300" id="statNetProfit">₹0</p>
+                    <p class="text-[10px] text-emerald-200/80 mt-1">खर्च घटाने के बाद बचत</p>
+                </div>
+            </div>
+
+            <!-- 5. GALLA / CASH IN HAND CARD (Crucial for Brother at Closing Time) -->
+            <div class="bg-slate-900 text-white rounded-xl p-4 border border-slate-800 shadow-md">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="bg-amber-500/20 text-amber-300 border border-amber-400/30 text-[10px] font-bold px-2 py-0.5 rounded uppercase">5. गल्ले का नकद हिसाब (Cash in Hand)</span>
+                        <h3 class="text-sm font-bold text-slate-200 mt-1.5">गल्ले में मौजूद शुद्ध नकद (Net Cash)</h3>
+                        <p class="text-[11px] text-slate-400 num-font mt-0.5" id="statGallaBreakdown">नकद बिक्री: ₹0 - नकद खर्च: ₹0</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-2xl sm:text-3xl font-extrabold num-font text-amber-400" id="statNetCashInGalla">₹0</span>
+                    </div>
+                </div>
+
+                <!-- Payment Collection Breakdown -->
+                <div class="grid grid-cols-3 gap-2 text-center mt-3 pt-3 border-t border-slate-800">
+                    <div class="bg-slate-800/90 rounded-lg p-2">
+                        <span class="text-[10px] text-slate-400 block">नकद बिक्री (Cash)</span>
+                        <span class="text-xs sm:text-sm font-bold num-font text-emerald-400" id="statCash">₹0</span>
+                    </div>
+                    <div class="bg-slate-800/90 rounded-lg p-2">
+                        <span class="text-[10px] text-slate-400 block">ऑनलाइन (UPI)</span>
+                        <span class="text-xs sm:text-sm font-bold num-font text-blue-400" id="statUpi">₹0</span>
+                    </div>
+                    <div class="bg-slate-800/90 rounded-lg p-2">
+                        <span class="text-[10px] text-slate-400 block">उधार (Udhaar)</span>
+                        <span class="text-xs sm:text-sm font-bold num-font text-rose-400" id="statUdhaar">₹0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1-Click Send Complete Report to Owner on WhatsApp -->
+            <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <h4 class="text-sm font-bold text-slate-800">📲 मालिक को आज का पूरा हिसाब भेजें</h4>
+                    <p class="text-xs text-slate-500">बिक्री, खर्च, शुद्ध मुनाफा, गल्ले की नकदी और कम स्टॉक की रिपोर्ट WhatsApp करें</p>
+                </div>
+                <button onclick="shareOwnerReportWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-3 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm touch-btn shrink-0">
+                    <i class="fa-brands fa-whatsapp text-lg"></i>
+                    <span>मालिक को आज का पूरा हिसाब WhatsApp करें</span>
+                </button>
+            </div>
+
+            <!-- Item-wise Profit Breakdown Table -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+                <div class="px-4 py-3 border-b border-slate-100">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500">किस सामान से कितना मुनाफा हुआ (Item-wise Margin)</h4>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 border-b border-slate-200">
+                                <th class="py-2.5 px-3">आइटम</th>
+                                <th class="py-2.5 px-3 text-center">बिका (Qty)</th>
+                                <th class="py-2.5 px-3 text-right">कुल बिक्री</th>
+                                <th class="py-2.5 px-3 text-right">माल पर मुनाफा</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemWiseProfitBody" class="divide-y divide-slate-100">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Data Backup & Restore Card inside Hisaab Tab -->
+            <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-2xs space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-600">डेटा सुरक्षा व बैकअप (Backup & Restore)</h4>
+                        <p class="text-[11px] text-slate-500">फोन बदलने से पहले अपना सारा डेटा डाउनलोड या अपलोड करें</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2.5">
+                    <button onclick="exportFullBackup()" class="py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 touch-btn">
+                        <i class="fa-solid fa-download text-emerald-400"></i>
+                        <span>बैकअप डाउनलोड करें</span>
+                    </button>
+                    <label class="cursor-pointer py-2.5 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 touch-btn">
+                        <i class="fa-solid fa-upload"></i>
+                        <span>बैकअप अपलोड करें</span>
+                        <input type="file" accept=".json" class="hidden" onchange="importBackupFile(event)">
+                    </label>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ========================================== -->
+    <!-- MOBILE BOTTOM NAVIGATION BAR (5 TABS)      -->
+    <!-- ========================================== -->
+    <nav class="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 shadow-lg">
+        <div class="max-w-4xl mx-auto grid grid-cols-5 h-16">
+            <button onclick="switchView('pos')" id="navBtn-pos" class="flex flex-col items-center justify-center gap-1 text-blue-600 font-bold border-t-2 border-blue-600 bg-blue-50/40">
+                <i class="fa-solid fa-calculator text-base"></i>
+                <span class="text-[10px] sm:text-[11px]">बिलिंग (POS)</span>
+            </button>
+            <button onclick="switchView('stock')" id="navBtn-stock" class="flex flex-col items-center justify-center gap-1 text-slate-500 font-medium hover:text-slate-800 relative">
+                <i class="fa-solid fa-boxes-stacked text-base"></i>
+                <span class="text-[10px] sm:text-[11px]">स्टॉक (Stock)</span>
+                <span id="navLowStockDot" class="hidden absolute top-2 right-5 w-2 h-2 rounded-full bg-rose-500"></span>
+            </button>
+            <button onclick="switchView('expenses')" id="navBtn-expenses" class="flex flex-col items-center justify-center gap-1 text-slate-500 font-medium hover:text-slate-800">
+                <i class="fa-solid fa-wallet text-base"></i>
+                <span class="text-[10px] sm:text-[11px]">खर्च (Expense)</span>
+            </button>
+            <button onclick="switchView('bills')" id="navBtn-bills" class="flex flex-col items-center justify-center gap-1 text-slate-500 font-medium hover:text-slate-800">
+                <i class="fa-solid fa-file-invoice text-base"></i>
+                <span class="text-[10px] sm:text-[11px]">बिल (Bills)</span>
+            </button>
+            <button onclick="switchView('profit')" id="navBtn-profit" class="flex flex-col items-center justify-center gap-1 text-slate-500 font-medium hover:text-slate-800">
+                <i class="fa-solid fa-chart-pie text-base"></i>
+                <span class="text-[10px] sm:text-[11px]">हिसाब (Profit)</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- ========================================== -->
+    <!-- SLIDE-UP CHECKOUT & BILLING SHEET          -->
+    <!-- ========================================== -->
+    <div id="checkoutSheetModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 hidden flex-col justify-end">
+        <div class="bg-white w-full max-w-2xl mx-auto rounded-t-2xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
+            
+            <!-- Sheet Header -->
+            <div class="px-4 py-3 bg-slate-900 text-white flex items-center justify-between shrink-0">
+                <div>
+                    <h3 class="font-bold text-sm sm:text-base flex items-center gap-2" id="checkoutSheetTitle">
+                        <i class="fa-solid fa-receipt text-emerald-400"></i>
+                        <span>ग्राहक का बिल बनाएं (Checkout)</span>
+                    </h3>
+                </div>
+                <button onclick="closeCheckoutSheet()" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Scrollable Sheet Body -->
+            <div class="p-4 overflow-y-auto space-y-4 flex-1">
+                
+                <!-- Customer Details -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">
+                            ग्राहक का WhatsApp नंबर (10 अंक):
+                        </label>
+                        <div class="flex">
+                            <span class="bg-slate-200 text-slate-700 font-bold px-2.5 py-2 rounded-l-lg border border-r-0 border-slate-300 text-xs flex items-center num-font">+91</span>
+                            <input type="tel" id="billCustPhone" maxlength="10" placeholder="9876543210" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-r-lg text-sm font-bold num-font focus:outline-none focus:ring-2 focus:ring-blue-600">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">
+                            ग्राहक का नाम (Customer Name):
+                        </label>
+                        <input type="text" id="billCustName" placeholder="जैसे: मोहम्मद आरिफ / ग्राहक" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600">
+                    </div>
+                </div>
+
+                <!-- Cart Items List with In-Place Editable Rate & Qty (No Keyboard Focus Loss!) -->
+                <div>
+                    <div class="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase pb-1.5 border-b border-slate-200">
+                        <span>आइटम और बिक्री रेट (₹)</span>
+                        <span>मात्रा (Qty) व कुल</span>
+                    </div>
+                    <div id="checkoutItemsList" class="divide-y divide-slate-100 max-h-56 overflow-y-auto">
+                        <!-- Dynamically rendered -->
+                    </div>
+                </div>
+
+                <!-- Discount & Payment Mode -->
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-bold text-slate-700">कुल छूट (Discount ₹):</label>
+                        <input type="number" id="checkoutDiscount" value="0" min="0" oninput="recalcCheckoutTotals()" class="w-28 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-right font-bold num-font text-sm text-rose-600 focus:outline-none focus:ring-2 focus:ring-blue-600">
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 mb-1.5">पेमेंट कैसे मिला? (Payment Mode):</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button type="button" onclick="selectPayMode('Cash')" id="pmBtn-Cash" class="py-2 px-2 rounded-lg font-bold text-xs border border-emerald-600 bg-emerald-600 text-white">
+                                💵 नकद (Cash)
+                            </button>
+                            <button type="button" onclick="selectPayMode('UPI')" id="pmBtn-UPI" class="py-2 px-2 rounded-lg font-bold text-xs border border-slate-300 bg-white text-slate-700">
+                                📱 ऑनलाइन (UPI)
+                            </button>
+                            <button type="button" onclick="selectPayMode('Udhaar')" id="pmBtn-Udhaar" class="py-2 px-2 rounded-lg font-bold text-xs border border-slate-300 bg-white text-slate-700">
+                                📒 उधार (Credit)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Final Payable Banner -->
+                <div class="bg-slate-900 text-white p-3.5 rounded-xl flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] text-slate-400 block">कुल लेने योग्य रकम (Grand Total)</span>
+                        <span class="text-xs text-emerald-400 font-semibold" id="checkoutProfitPreview">इस बिल पर मुनाफा: ₹0</span>
+                    </div>
+                    <span class="text-2xl font-extrabold num-font text-white" id="checkoutGrandTotal">₹0</span>
+                </div>
+            </div>
+
+            <!-- Sheet Footer Actions -->
+            <div class="p-3.5 bg-white border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-2 shrink-0">
+                <button onclick="saveAndProcessBill(true)" class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl shadow-md flex items-center justify-center gap-2 touch-btn">
+                    <i class="fa-solid fa-file-pdf text-base"></i>
+                    <i class="fa-brands fa-whatsapp text-base"></i>
+                    <span>बिल सेव व PDF WhatsApp भेजें</span>
+                </button>
+                <button onclick="saveAndProcessBill(false)" class="w-full py-3 px-4 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 touch-btn">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>सिर्फ बिल सेव करें / PDF देखें</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- ADD / EDIT EXPENSE MODAL (नया खर्च मोडल)     -->
+    <!-- ========================================== -->
+    <div id="expenseModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden items-center justify-center p-3">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col">
+            <div class="px-4 py-3 bg-slate-900 text-white flex items-center justify-between shrink-0">
+                <h3 class="font-bold text-sm sm:text-base flex items-center gap-2" id="expenseModalTitle">
+                    <i class="fa-solid fa-wallet text-rose-400"></i>
+                    <span>दुकान का खर्च लिखें (Add Expense)</span>
+                </h3>
+                <button onclick="closeModal('expenseModal')" class="text-slate-400 hover:text-white text-xl">&times;</button>
+            </div>
+
+            <div class="p-4 overflow-y-auto space-y-3.5 flex-1">
+                <input type="hidden" id="editExpenseId" value="">
+
+                <!-- Quick 1-Tap Category Chips inside Modal -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">1. किस काम में खर्च हुआ? (चुनें) *</label>
+                    <div class="flex flex-wrap gap-1.5 mb-2" id="modalExpenseChips">
+                        <button type="button" onclick="selectExpenseChip('☕ चाय-नाश्ता')" class="exp-chip px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700">☕ चाय-नाश्ता</button>
+                        <button type="button" onclick="selectExpenseChip('🛺 भाड़ा / ट्रांसपोर्ट')" class="exp-chip px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700">🛺 भाड़ा / ट्रांसपोर्ट</button>
+                        <button type="button" onclick="selectExpenseChip('💡 बिजली / रिचार्ज')" class="exp-chip px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700">💡 बिजली / रिचार्ज</button>
+                        <button type="button" onclick="selectExpenseChip('👷 लड़के / मजदूरी')" class="exp-chip px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700">👷 लड़के / मजदूरी</button>
+                        <button type="button" onclick="selectExpenseChip('🏪 दुकान खर्च / किराया')" class="exp-chip px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700">🏪 दुकान खर्च / किराया</button>
+                        <button type="button" onclick="selectExpenseChip('📦 पन्नी / पैकिंग')" class="exp-chip px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700">📦 पन्नी / पैकिंग</button>
+                        <button type="button" onclick="selectExpenseChip('📝 अन्य खर्च')" class="exp-chip px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700">📝 अन्य खर्च</button>
+                    </div>
+                    <input type="text" id="expCategoryInput" placeholder="या यहाँ खुद लिखें..." class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                </div>
+
+                <!-- Amount & Date -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-rose-700 mb-1">2. खर्च की रकम (₹) *</label>
+                        <input type="number" id="expAmountInput" placeholder="जैसे: 50" min="1" class="w-full px-3 py-2 bg-rose-50/50 border border-rose-300 rounded-xl text-base font-extrabold num-font text-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">तारीख (Date)</label>
+                        <input type="date" id="expDateInput" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold num-font text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    </div>
+                </div>
+
+                <!-- Expense Payment Mode -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">3. पैसा कहाँ से दिया? (Payment Mode)</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" onclick="selectExpPayMode('Cash')" id="expPmBtn-Cash" class="py-2 px-3 rounded-xl font-bold text-xs border border-rose-600 bg-rose-600 text-white">
+                            💵 गल्ले से नकद (Cash)
+                        </button>
+                        <button type="button" onclick="selectExpPayMode('UPI')" id="expPmBtn-UPI" class="py-2 px-3 rounded-xl font-bold text-xs border border-slate-300 bg-white text-slate-700">
+                            📱 ऑनलाइन (UPI)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Optional Note -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">विवरण / नोट (Optional Note)</label>
+                    <input type="text" id="expNoteInput" placeholder="जैसे: 4 कप चाय या रिक्शा भाड़ा..." class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                </div>
+            </div>
+
+            <div class="p-3.5 bg-slate-50 border-t border-slate-200 flex gap-2 shrink-0">
+                <button onclick="closeModal('expenseModal')" class="w-1/3 py-2.5 rounded-xl bg-slate-200 text-slate-700 font-bold text-xs">रद्द करें</button>
+                <button onclick="saveExpenseFromModal()" class="w-2/3 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm shadow-sm touch-btn">
+                    खर्च सेव करें
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- ADD / EDIT STOCK ITEM MODAL (WITH PHOTO)   -->
+    <!-- ========================================== -->
+    <div id="productModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden items-center justify-center p-3">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col">
+            
+            <div class="px-4 py-3 bg-slate-900 text-white flex items-center justify-between shrink-0">
+                <h3 class="font-bold text-sm sm:text-base" id="productModalTitle">नया स्टॉक आइटम जोड़ें (Add Stock)</h3>
+                <button onclick="closeModal('productModal')" class="text-slate-400 hover:text-white text-lg">&times;</button>
+            </div>
+
+            <div class="p-4 overflow-y-auto space-y-3.5 flex-1">
+                <input type="hidden" id="editProdId" value="">
+
+                <!-- Image Upload / Camera Capture Box -->
+                <div class="flex items-center gap-3.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div id="prodImagePreviewBox" class="w-20 h-20 rounded-xl bg-slate-200 border border-slate-300 flex items-center justify-center overflow-hidden shrink-0 relative">
+                        <i id="prodImagePlaceholderIcon" class="fa-solid fa-camera text-slate-400 text-2xl"></i>
+                        <img id="prodImagePreview" src="" alt="Product" class="w-full h-full object-cover hidden">
+                    </div>
+                    <div class="flex-1 space-y-1.5">
+                        <p class="text-xs font-bold text-slate-700">सामान की फोटो लगाएं (Photo)</p>
+                        <p class="text-[11px] text-slate-500 leading-tight">मोबाइल कैमरे से फोटो खींचें या गैलरी से चुनें (Auto-Compressed)</p>
+                        <div class="flex gap-2 pt-1">
+                            <label class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 touch-btn">
+                                <i class="fa-solid fa-camera"></i>
+                                <span>फोटो चुनें</span>
+                                <input type="file" id="prodImageInput" accept="image/*" class="hidden" onchange="handleProductImageSelect(event)">
+                            </label>
+                            <button type="button" id="removeProdImgBtn" onclick="removeSelectedProductImage()" class="hidden bg-rose-50 text-rose-600 border border-rose-200 text-xs font-semibold px-2.5 py-1.5 rounded-lg">
+                                हटाएं
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Item Name & Category -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">आइटम का नाम (Item Name) *</label>
+                    <input type="text" id="prodNameInput" placeholder="जैसे: डबल बेडशीट कॉटन / कंबल" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">कैटेगरी (Category)</label>
+                        <input type="text" id="prodCategoryInput" placeholder="जैसे: चादर / तौलिया" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">अभी कुल स्टॉक (Qty) *</label>
+                        <input type="number" id="prodStockInput" placeholder="0" min="0" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-bold num-font focus:outline-none focus:ring-2 focus:ring-blue-600">
+                    </div>
+                </div>
+
+                <!-- Purchase Cost & Selling Price -->
+                <div class="grid grid-cols-2 gap-3 bg-emerald-50/60 p-3 rounded-xl border border-emerald-200">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">खरीद रेट (Cost ₹) *</label>
+                        <input type="number" id="prodCostInput" placeholder="जैसे: 250" min="0" oninput="updateMarginPreview()" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold num-font focus:outline-none focus:ring-2 focus:ring-emerald-600">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-emerald-900 mb-1">बिक्री रेट (Sale ₹) *</label>
+                        <input type="number" id="prodPriceInput" placeholder="जैसे: 380" min="0" oninput="updateMarginPreview()" class="w-full px-3 py-2 bg-white border border-emerald-500 rounded-xl text-sm font-bold num-font text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-600">
+                    </div>
+                    <div class="col-span-2 flex items-center justify-between text-xs pt-1 border-t border-emerald-200/80">
+                        <span class="font-medium text-slate-600">प्रति पीस मुनाफा (Margin):</span>
+                        <span class="font-extrabold num-font text-emerald-700" id="prodMarginPreview">₹0 (0%)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3.5 bg-slate-50 border-t border-slate-200 flex gap-2 shrink-0">
+                <button onclick="closeModal('productModal')" class="w-1/3 py-2.5 rounded-xl bg-slate-200 text-slate-700 font-bold text-xs">रद्द करें</button>
+                <button onclick="saveProductFromModal()" class="w-2/3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-sm touch-btn">
+                    स्टॉक सेव करें
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- PDF INVOICE PREVIEW & WHATSAPP SHARE MODAL -->
+    <!-- ========================================== -->
+    <div id="invoicePdfModal" class="fixed inset-0 bg-slate-900/75 backdrop-blur-xs z-50 hidden items-center justify-center p-2 sm:p-4">
+        <div class="bg-slate-100 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden max-h-[95vh] flex flex-col border border-slate-300">
+            
+            <!-- Modal Top Bar -->
+            <div class="px-4 py-3 bg-slate-900 text-white flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-file-pdf text-rose-400 text-lg"></i>
+                    <div>
+                        <h3 class="font-bold text-sm leading-none" id="pdfModalHeaderTitle">पक्का PDF बिल (Retail Invoice)</h3>
+                        <span class="text-[11px] text-slate-400">PDF फाइल WhatsApp पर भेजें या डाउनलोड करें</span>
+                    </div>
+                </div>
+                <button onclick="closeModal('invoicePdfModal')" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Printable High-Contrast Invoice Receipt Container (Captured by html2canvas + jsPDF) -->
+            <div class="p-3 overflow-y-auto flex-1">
+                <div id="invoice-print-area" class="bg-white p-5 rounded-xl border border-slate-300 text-slate-900 shadow-xs mx-auto" style="max-width: 460px; background-color: #ffffff;">
+                    
+                    <!-- Invoice Brand Header -->
+                    <div class="border-b-2 border-slate-900 pb-3 flex items-start justify-between gap-2">
+                        <div>
+                            <h2 class="text-lg font-extrabold tracking-tight text-slate-900 uppercase">MAHENOOR HANDLOOM</h2>
+                            <p class="text-xs font-bold text-slate-700">महेनूर हैंडलूम • मेन मार्केट, बेलहरा ब्रांच</p>
+                            <p class="text-[11px] text-slate-600 num-font mt-0.5" id="invShopPhoneLine"></p>
+                        </div>
+                        <div class="text-right">
+                            <span class="inline-block bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">CASH / RETAIL MEMO</span>
+                            <p class="text-xs font-extrabold num-font text-slate-900 mt-1" id="invNumberText">INV #101</p>
+                            <p class="text-[11px] text-slate-600 num-font" id="invDateText">17/11/2026</p>
+                        </div>
+                    </div>
+
+                    <!-- Customer Info Row -->
+                    <div class="py-2.5 border-b border-slate-200 flex items-center justify-between text-xs">
+                        <div>
+                            <span class="text-[10px] font-bold uppercase text-slate-400 block">ग्राहक (Customer):</span>
+                            <p class="font-bold text-slate-900 text-sm" id="invCustName">ग्राहक</p>
+                            <p class="text-[11px] text-slate-700 num-font font-semibold" id="invCustPhone"></p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] font-bold uppercase text-slate-400 block">पेमेंट माध्यम:</span>
+                            <span class="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-300 inline-block mt-0.5" id="invPayMode">Cash</span>
+                        </div>
+                    </div>
+
+                    <!-- Itemized Table -->
+                    <div class="my-2">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="border-b-2 border-slate-800 text-slate-800 font-bold">
+                                    <th class="py-1.5 w-6">#</th>
+                                    <th class="py-1.5">सामान का विवरण (Item)</th>
+                                    <th class="py-1.5 text-center">Qty</th>
+                                    <th class="py-1.5 text-right">Rate</th>
+                                    <th class="py-1.5 text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invItemsTableBody" class="divide-y divide-slate-200 num-font">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Totals Section -->
+                    <div class="border-t-2 border-slate-900 pt-2.5 space-y-1 text-xs">
+                        <div class="flex justify-between text-slate-700">
+                            <span>उप-योग (Subtotal):</span>
+                            <span class="font-bold num-font" id="invSubTotal">₹0</span>
+                        </div>
+                        <div class="flex justify-between text-rose-600" id="invDiscountRow">
+                            <span>विशेष छूट (Discount):</span>
+                            <span class="font-bold num-font" id="invDiscount">-₹0</span>
+                        </div>
+                        <div class="flex justify-between text-base font-extrabold text-slate-900 pt-1.5 border-t border-slate-300">
+                            <span>कुल रकम (Grand Total):</span>
+                            <span class="num-font" id="invGrandTotal">₹0</span>
+                        </div>
+                    </div>
+
+                    <!-- Footer Note -->
+                    <div class="mt-4 pt-2.5 border-t border-dashed border-slate-300 text-center">
+                        <p class="text-xs font-bold text-slate-900">महेनूर हैंडलूम (बेलहरा ब्रांच) में पधारने के लिए धन्यवाद!</p>
+                        <p class="text-[10px] text-slate-500 mt-0.5">नोट: यह कंप्यूटर जनरेटेड रसीद है। अगली खरीदारी पर यह बिल दिखाएं।</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rock-Solid Dual Action Buttons for PDF & Direct WhatsApp -->
+            <div class="p-3.5 bg-white border-t border-slate-200 space-y-2 shrink-0">
+                <button id="btnSharePdfWhatsapp" onclick="generateAndSharePDF()" class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md flex items-center justify-center gap-2 touch-btn">
+                    <i class="fa-solid fa-file-pdf text-base"></i>
+                    <span>📄 PDF शेयर / डाउनलोड करें (Share PDF on WhatsApp)</span>
+                </button>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button onclick="openDirectWhatsAppChat()" class="py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 touch-btn">
+                        <i class="fa-brands fa-whatsapp text-base"></i>
+                        <span>💬 सीधा WhatsApp चैट खोलें (Direct WhatsApp)</span>
+                    </button>
+                    <button onclick="closeModal('invoicePdfModal')" class="py-2.5 px-3 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-xl">
+                        बंद करें (Close)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- CONFIRMATION MODAL (FOR DELETE ACTIONS)    -->
+    <!-- ========================================== -->
+    <div id="confirmDialogModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 space-y-4">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 text-lg">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-900 text-sm sm:text-base" id="confirmDialogTitle">क्या आप वाकई डिलीट करना चाहते हैं?</h4>
+                    <p class="text-xs text-slate-500 mt-1" id="confirmDialogText">यह डेटा हमेशा के लिए हट जाएगा।</p>
+                </div>
+            </div>
+
+            <!-- Optional Checkbox for Restoring Stock on Bill Delete -->
+            <div id="restoreStockCheckboxWrap" class="hidden bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                    <input type="checkbox" id="restoreStockCheckbox" checked class="w-4 h-4 accent-emerald-600 rounded">
+                    <span>इस बिल में बिके हुए सामान को वापस स्टॉक (गोदाम) में जोड़ दें</span>
+                </label>
+            </div>
+
+            <div class="flex gap-2 pt-1">
+                <button onclick="closeModal('confirmDialogModal')" class="w-1/2 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs">नहीं, रहने दें</button>
+                <button id="confirmDialogActionBtn" class="w-1/2 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-sm">हाँ, डिलीट करें</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- SETTINGS & BACKUP MODAL                    -->
+    <!-- ========================================== -->
+    <div id="settingsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 space-y-4">
+            <div class="flex items-center justify-between pb-2.5 border-b border-slate-200">
+                <h3 class="font-bold text-base text-slate-900">दुकान सेटिंग्स और डेटा बैकअप</h3>
+                <button onclick="closeModal('settingsModal')" class="text-slate-400 hover:text-slate-700 text-xl">&times;</button>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">मालिक का WhatsApp नंबर (रिपोर्ट भेजने के लिए):</label>
+                    <input type="tel" id="settingOwnerPhone" maxlength="10" placeholder="10 अंकों का मोबाइल नंबर" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-bold num-font">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">बिल पर छपने वाला दुकान का मोबाइल नंबर:</label>
+                    <input type="tel" id="settingShopPhone" maxlength="10" placeholder="ग्राहक संपर्क नंबर" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-bold num-font">
+                </div>
+
+                <div class="pt-2 border-t border-slate-200 space-y-2">
+                    <p class="text-[11px] font-bold text-slate-500 uppercase">डेटा सुरक्षा (Backup & Restore)</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="exportFullBackup()" class="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-download"></i> बैकअप डाउनलोड
+                        </button>
+                        <label class="cursor-pointer py-2.5 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-upload"></i> बैकअप अपलोड
+                            <input type="file" accept=".json" class="hidden" onchange="importBackupFile(event)">
+                        </label>
+                    </div>
+                    <button onclick="confirmClearAllData()" class="w-full py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 mt-1">
+                        <i class="fa-solid fa-trash"></i> सारा डेटा रीसेट / साफ करें
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeModal('settingsModal')" class="w-1/3 py-2.5 rounded-xl bg-slate-200 text-slate-700 font-bold text-xs">बंद करें</button>
+                <button onclick="saveSettings()" class="w-2/3 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs">सेटिंग सेव करें</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="appToast" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 hidden bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl border border-slate-700 flex items-center gap-2.5 text-xs font-semibold max-w-xs w-full">
+        <i id="appToastIcon" class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+        <span id="appToastText" class="truncate"></span>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- CORE APPLICATION LOGIC                     -->
+    <!-- ========================================== -->
+    <script>
+        // Storage Keys (Zero pre-filled dummy stock as requested)
+        const STORAGE_KEY_PRODUCTS = 'mh_belhara_pro_v2_products';
+        const STORAGE_KEY_BILLS    = 'mh_belhara_pro_v2_bills';
+        const STORAGE_KEY_EXPENSES = 'mh_belhara_pro_v2_expenses';
+        const STORAGE_KEY_SETTINGS = 'mh_belhara_pro_v2_settings';
+
+        // Application State (Starts 100% empty if nothing in localStorage)
+        let products = [];
+        let bills = [];
+        let expenses = [];
+        let settings = { ownerPhone: '', shopPhone: '', voiceEnabled: true };
+
+        let cart = [];
+        let activeCategory = 'ALL';
+        let selectedPayMode = 'Cash';
+        let selectedExpPayMode = 'Cash';
+        let editingBillId = null; // Non-null when editing an existing bill
+        let activeInvoiceBill = null; // Bill currently previewed in PDF modal
+        let currentUploadedImgData = ''; // Compressed base64 photo for product modal
+        let expenseFilter = 'today';
+        let profitFilter = 'today';
+        let showProfitNumbers = true;
+
+        // --- INITIALIZATION ---
+        window.onload = function () {
+            // Remove any legacy dummy keys
+            localStorage.removeItem('mh_belhara_products');
+            localStorage.removeItem('mh_belhara_bills');
+            localStorage.removeItem('mh_belhara_customers');
+
+            loadAppState();
+            updateVoiceButtonUI();
+            renderPOSCategories();
+            renderPOSGrid();
+            updateCartUI();
+            updateLowStockIndicator();
+        };
+
+        function loadAppState() {
+            try {
+                const p = localStorage.getItem(STORAGE_KEY_PRODUCTS);
+                products = p ? JSON.parse(p) : [];
+
+                const b = localStorage.getItem(STORAGE_KEY_BILLS);
+                bills = b ? JSON.parse(b) : [];
+
+                const ex = localStorage.getItem(STORAGE_KEY_EXPENSES);
+                expenses = ex ? JSON.parse(ex) : [];
+
+                const s = localStorage.getItem(STORAGE_KEY_SETTINGS);
+                if (s) {
+                    settings = { ...settings, ...JSON.parse(s) };
+                }
+            } catch (e) {
+                console.error('Error loading state:', e);
+                products = [];
+                bills = [];
+                expenses = [];
+            }
+        }
+
+        function saveAppState() {
+            try {
+                localStorage.setItem(STORAGE_KEY_PRODUCTS, JSON.stringify(products));
+                localStorage.setItem(STORAGE_KEY_BILLS, JSON.stringify(bills));
+                localStorage.setItem(STORAGE_KEY_EXPENSES, JSON.stringify(expenses));
+                localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+                updateLowStockIndicator();
+                return true;
+            } catch (e) {
+                showToast('मोबाइल मेमोरी फुल हो रही है! कृपया बैकअप लें या कुछ फोटो हटाएं।', 'fa-triangle-exclamation text-amber-400');
+                return false;
+            }
+        }
+
+        // --- HINDI VOICE READOUT (WEB SPEECH API) ---
+        function speakHindi(text) {
+            if (!settings.voiceEnabled || !('speechSynthesis' in window)) return;
+            try {
+                window.speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance(text);
+                utter.lang = 'hi-IN';
+                utter.rate = 0.95;
+                window.speechSynthesis.speak(utter);
+            } catch (e) {
+                // Ignore speech errors on unsupported devices
+            }
+        }
+
+        function toggleVoiceReadout() {
+            settings.voiceEnabled = !settings.voiceEnabled;
+            saveAppState();
+            updateVoiceButtonUI();
+            if (settings.voiceEnabled) {
+                speakHindi('आवाज चालू है');
+                showToast('बोलने वाली आवाज चालू (ON) हो गई');
+            } else {
+                if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+                showToast('आवाज बंद (OFF) कर दी गई');
+            }
+        }
+
+        function updateVoiceButtonUI() {
+            const btn = document.getElementById('voiceToggleBtn');
+            const icon = document.getElementById('voiceToggleIcon');
+            const txt = document.getElementById('voiceToggleText');
+            if (settings.voiceEnabled) {
+                btn.className = 'h-9 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 flex items-center gap-1.5 border border-slate-700 text-xs font-bold touch-btn';
+                icon.className = 'fa-solid fa-volume-high';
+                txt.textContent = 'आवाज ON';
+            } else {
+                btn.className = 'h-9 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 flex items-center gap-1.5 border border-slate-700 text-xs font-bold touch-btn';
+                icon.className = 'fa-solid fa-volume-xmark';
+                txt.textContent = 'आवाज OFF';
+            }
+        }
+
+        // --- 5-TAB NAVIGATION ---
+        function switchView(viewName) {
+            ['pos', 'stock', 'expenses', 'bills', 'profit'].forEach(v => {
+                document.getElementById('view-' + v).classList.add('hidden');
+                const btn = document.getElementById('navBtn-' + v);
+                btn.className = 'flex flex-col items-center justify-center gap-1 text-slate-500 font-medium hover:text-slate-800 relative';
+            });
+
+            document.getElementById('view-' + viewName).classList.remove('hidden');
+            const activeBtn = document.getElementById('navBtn-' + viewName);
+            activeBtn.className = 'flex flex-col items-center justify-center gap-1 text-blue-600 font-bold border-t-2 border-blue-600 bg-blue-50/40 relative';
+
+            // Show floating cart bar only on POS tab when cart is non-empty
+            const floatBar = document.getElementById('floatingCartBar');
+            if (viewName !== 'pos' || cart.length === 0) {
+                floatBar.classList.add('hidden');
+            } else {
+                floatBar.classList.remove('hidden');
+            }
+
+            if (viewName === 'pos') {
+                renderPOSCategories();
+                renderPOSGrid();
+            } else if (viewName === 'stock') {
+                renderStockList();
+            } else if (viewName === 'expenses') {
+                renderExpensesList();
+            } else if (viewName === 'bills') {
+                renderBillsList();
+            } else if (viewName === 'profit') {
+                renderProfitAnalytics();
+            }
+        }
+
+        function updateLowStockIndicator() {
+            const lowCount = products.filter(p => p.stock <= 5).length;
+            const dot = document.getElementById('navLowStockDot');
+            if (lowCount > 0) dot.classList.remove('hidden');
+            else dot.classList.add('hidden');
+        }
+
+        // ==========================================
+        // IMAGE COMPRESSION BUG FIX (320x320, 0.65 JPEG)
+        // ==========================================
+        function handleProductImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const img = new Image();
+                img.onload = function () {
+                    const canvas = document.createElement('canvas');
+                    const maxDim = 320;
+                    let w = img.width;
+                    let h = img.height;
+
+                    if (w > h) {
+                        if (w > maxDim) { h = Math.round(h * (maxDim / w)); w = maxDim; }
+                    } else {
+                        if (h > maxDim) { w = Math.round(w * (maxDim / h)); h = maxDim; }
+                    }
+
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.drawImage(img, 0, 0, w, h);
+
+                    currentUploadedImgData = canvas.toDataURL('image/jpeg', 0.65);
+                    showProductModalImagePreview(currentUploadedImgData);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showProductModalImagePreview(dataUrl) {
+            const imgEl = document.getElementById('prodImagePreview');
+            const iconEl = document.getElementById('prodImagePlaceholderIcon');
+            const rmBtn = document.getElementById('removeProdImgBtn');
+
+            if (dataUrl) {
+                imgEl.src = dataUrl;
+                imgEl.classList.remove('hidden');
+                iconEl.classList.add('hidden');
+                rmBtn.classList.remove('hidden');
+            } else {
+                imgEl.src = '';
+                imgEl.classList.add('hidden');
+                iconEl.classList.remove('hidden');
+                rmBtn.classList.add('hidden');
+            }
+        }
+
+        function removeSelectedProductImage() {
+            currentUploadedImgData = '';
+            document.getElementById('prodImageInput').value = '';
+            showProductModalImagePreview('');
+        }
+
+        // ==========================================
+        // STOCK MANAGEMENT (ADD, EDIT, DELETE)
+        // ==========================================
+        function openProductModal(prodId = null) {
+            document.getElementById('prodImageInput').value = '';
+
+            if (prodId) {
+                const p = products.find(x => x.id === prodId);
+                if (!p) return;
+                document.getElementById('productModalTitle').textContent = 'आइटम सुधारें (Edit Stock Item)';
+                document.getElementById('editProdId').value = p.id;
+                document.getElementById('prodNameInput').value = p.name;
+                document.getElementById('prodCategoryInput').value = p.category || '';
+                document.getElementById('prodStockInput').value = p.stock;
+                document.getElementById('prodCostInput').value = p.cost;
+                document.getElementById('prodPriceInput').value = p.price;
+                currentUploadedImgData = p.image || '';
+                showProductModalImagePreview(currentUploadedImgData);
+            } else {
+                document.getElementById('productModalTitle').textContent = 'नया सामान जोड़ें (Add Stock)';
+                document.getElementById('editProdId').value = '';
+                document.getElementById('prodNameInput').value = '';
+                document.getElementById('prodCategoryInput').value = '';
+                document.getElementById('prodStockInput').value = '';
+                document.getElementById('prodCostInput').value = '';
+                document.getElementById('prodPriceInput').value = '';
+                currentUploadedImgData = '';
+                showProductModalImagePreview('');
+            }
+            updateMarginPreview();
+            openModal('productModal');
+        }
+
+        function updateMarginPreview() {
+            const cost = parseFloat(document.getElementById('prodCostInput').value) || 0;
+            const price = parseFloat(document.getElementById('prodPriceInput').value) || 0;
+            const margin = price - cost;
+            const pct = cost > 0 ? Math.round((margin / cost) * 100) : 0;
+            const el = document.getElementById('prodMarginPreview');
+            el.textContent = `₹${margin} (${pct}%)`;
+            el.className = margin >= 0 ? 'font-extrabold num-font text-emerald-700' : 'font-extrabold num-font text-rose-600';
+        }
+
+        function saveProductFromModal() {
+            const editId = document.getElementById('editProdId').value;
+            const name = (document.getElementById('prodNameInput').value || '').trim();
+            const category = (document.getElementById('prodCategoryInput').value || '').trim() || 'हैंडलूम';
+            const stock = parseInt(document.getElementById('prodStockInput').value);
+            const cost = parseFloat(document.getElementById('prodCostInput').value);
+            const price = parseFloat(document.getElementById('prodPriceInput').value);
+
+            if (!name) {
+                showToast('कृपया आइटम का नाम लिखें', 'fa-circle-exclamation text-amber-400');
+                return;
+            }
+            if (isNaN(price) || price <= 0) {
+                showToast('कृपया सही बिक्री रेट (Sale Price) डालें', 'fa-circle-exclamation text-amber-400');
+                return;
+            }
+
+            const finalStock = isNaN(stock) ? 0 : Math.max(0, stock);
+            const finalCost = isNaN(cost) ? 0 : Math.max(0, cost);
+
+            if (editId) {
+                const idx = products.findIndex(x => x.id === editId);
+                if (idx > -1) {
+                    products[idx].name = name;
+                    products[idx].category = category;
+                    products[idx].stock = finalStock;
+                    products[idx].cost = finalCost;
+                    products[idx].price = price;
+                    products[idx].image = currentUploadedImgData;
+                }
+                showToast('आइटम अपडेट कर दिया गया');
+            } else {
+                products.unshift({
+                    id: 'item_' + Date.now(),
+                    name,
+                    category,
+                    stock: finalStock,
+                    cost: finalCost,
+                    price,
+                    image: currentUploadedImgData
+                });
+                showToast('नया सामान गोदाम में जुड़ गया');
+            }
+
+            saveAppState();
+            closeModal('productModal');
+            renderPOSCategories();
+            renderPOSGrid();
+            renderStockList();
+        }
+
+        function quickAdjustStock(prodId, delta) {
+            const p = products.find(x => x.id === prodId);
+            if (!p) return;
+            p.stock = Math.max(0, p.stock + delta);
+            saveAppState();
+            renderStockList();
+            renderPOSGrid();
+        }
+
+        function confirmDeleteProduct(prodId) {
+            const p = products.find(x => x.id === prodId);
+            if (!p) return;
+
+            document.getElementById('confirmDialogTitle').textContent = `"${p.name}" को डिलीट करें?`;
+            document.getElementById('confirmDialogText').textContent = 'यह आइटम आपकी स्टॉक लिस्ट से हमेशा के लिए हट जाएगा।';
+            document.getElementById('restoreStockCheckboxWrap').classList.add('hidden');
+
+            const btn = document.getElementById('confirmDialogActionBtn');
+            btn.onclick = function () {
+                products = products.filter(x => x.id !== prodId);
+                cart = cart.filter(c => c.id !== prodId);
+                saveAppState();
+                closeModal('confirmDialogModal');
+                renderPOSCategories();
+                renderPOSGrid();
+                renderStockList();
+                updateCartUI();
+                showToast('आइटम डिलीट कर दिया गया');
+            };
+
+            openModal('confirmDialogModal');
+        }
+
+        function renderStockList() {
+            const container = document.getElementById('stockListContainer');
+            const query = (document.getElementById('stockSearch').value || '').trim().toLowerCase();
+
+            let totalVal = 0;
+            let lowCount = 0;
+            products.forEach(p => {
+                totalVal += (p.stock * p.cost);
+                if (p.stock <= 5) lowCount++;
+            });
+            document.getElementById('stockSummaryCount').textContent = products.length;
+            document.getElementById('stockSummaryValue').textContent = `₹${totalVal.toLocaleString('en-IN')}`;
+            document.getElementById('stockSummaryLow').textContent = lowCount;
+
+            if (products.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center space-y-3">
+                        <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto text-2xl">
+                            <i class="fa-solid fa-box-open"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-base">गोदाम में अभी कोई स्टॉक नहीं है</h3>
+                            <p class="text-xs text-slate-500 mt-1 max-w-xs mx-auto">अपनी दुकान के हैंडलूम आइटम (फोटो, खरीद रेट और बिक्री रेट के साथ) जोड़ने के लिए नीचे बटन दबाएं।</p>
+                        </div>
+                        <button onclick="openProductModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs sm:text-sm inline-flex items-center gap-2 shadow-sm touch-btn">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>+ नया सामान जोड़ें (Add First Item)</span>
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            const filtered = products.filter(p =>
+                p.name.toLowerCase().includes(query) ||
+                (p.category && p.category.toLowerCase().includes(query))
+            );
+
+            container.innerHTML = '';
+            filtered.forEach(p => {
+                const isLow = p.stock <= 5;
+                const thumbHtml = p.image
+                    ? `<img src="${p.image}" class="w-14 h-14 rounded-xl object-cover border border-slate-200 shrink-0">`
+                    : `<div class="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 font-bold text-base shrink-0">${p.name.charAt(0).toUpperCase()}</div>`;
+
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl p-3 border border-slate-200 shadow-2xs flex flex-col gap-2.5';
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-2.5">
+                        <div class="flex items-center gap-3 min-w-0">
+                            ${thumbHtml}
+                            <div class="min-w-0">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">${p.category || 'हैंडलूम'}</span>
+                                <h4 class="font-bold text-slate-900 text-sm sm:text-base truncate">${p.name}</h4>
+                                <div class="flex flex-wrap items-center gap-2.5 mt-1 text-xs num-font">
+                                    <span class="text-slate-500">खरीद: <b class="text-slate-700">₹${p.cost}</b></span>
+                                    <span class="text-slate-500">बिक्री: <b class="text-emerald-700">₹${p.price}</b></span>
+                                    <span class="text-emerald-600 font-semibold">बचत: ₹${p.price - p.cost}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-right shrink-0">
+                            <span class="inline-block px-2 py-0.5 rounded-md text-xs font-extrabold num-font ${p.stock === 0 ? 'bg-rose-600 text-white' : isLow ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}">
+                                स्टॉक: ${p.stock}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[11px] font-semibold text-slate-500 mr-1">मात्रा:</span>
+                            <button onclick="quickAdjustStock('${p.id}', -1)" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm flex items-center justify-center touch-btn">-</button>
+                            <button onclick="quickAdjustStock('${p.id}', 1)" class="w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-sm flex items-center justify-center touch-btn">+</button>
+                            <button onclick="quickAdjustStock('${p.id}', 5)" class="px-2 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs flex items-center justify-center num-font touch-btn">+5</button>
+                        </div>
+
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="openProductModal('${p.id}')" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center gap-1 touch-btn">
+                                <i class="fa-solid fa-pen text-[11px]"></i> सुधारें
+                            </button>
+                            <button onclick="confirmDeleteProduct('${p.id}')" class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold text-xs flex items-center gap-1 touch-btn">
+                                <i class="fa-solid fa-trash-can text-[11px]"></i> हटाएं
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // ==========================================
+        // TAB 3: EXPENSES MODULE (दुकान खर्च)
+        // ==========================================
+        function setExpenseFilter(mode) {
+            expenseFilter = mode;
+            document.getElementById('expFilterBtn-today').className = mode === 'today'
+                ? 'flex-1 py-2 rounded-lg text-xs font-bold bg-slate-900 text-white'
+                : 'flex-1 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100';
+            document.getElementById('expFilterBtn-all').className = mode === 'all'
+                ? 'flex-1 py-2 rounded-lg text-xs font-bold bg-slate-900 text-white'
+                : 'flex-1 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100';
+            renderExpensesList();
+        }
+
+        function openExpenseModal(expId = null, presetCategory = '') {
+            const todayISO = new Date().toISOString().split('T')[0];
+
+            if (expId) {
+                const ex = expenses.find(x => x.id === expId);
+                if (!ex) return;
+                document.getElementById('expenseModalTitle').innerHTML = `<i class="fa-solid fa-pen text-amber-400"></i><span>खर्च में सुधार करें (Edit Expense)</span>`;
+                document.getElementById('editExpenseId').value = ex.id;
+                document.getElementById('expCategoryInput').value = ex.category;
+                document.getElementById('expAmountInput').value = ex.amount;
+                document.getElementById('expDateInput').value = ex.isoDate || todayISO;
+                document.getElementById('expNoteInput').value = ex.note || '';
+                selectExpPayMode(ex.payMode || 'Cash');
+                highlightExpenseChip(ex.category);
+            } else {
+                document.getElementById('expenseModalTitle').innerHTML = `<i class="fa-solid fa-wallet text-rose-400"></i><span>दुकान का खर्च लिखें (Add Expense)</span>`;
+                document.getElementById('editExpenseId').value = '';
+                document.getElementById('expCategoryInput').value = presetCategory || '☕ चाय-नाश्ता';
+                document.getElementById('expAmountInput').value = '';
+                document.getElementById('expDateInput').value = todayISO;
+                document.getElementById('expNoteInput').value = '';
+                selectExpPayMode('Cash');
+                highlightExpenseChip(presetCategory || '☕ चाय-नाश्ता');
+            }
+
+            openModal('expenseModal');
+            setTimeout(() => {
+                document.getElementById('expAmountInput').focus();
+            }, 150);
+        }
+
+        function selectExpenseChip(catName) {
+            document.getElementById('expCategoryInput').value = catName;
+            highlightExpenseChip(catName);
+        }
+
+        function highlightExpenseChip(catName) {
+            document.querySelectorAll('#modalExpenseChips .exp-chip').forEach(btn => {
+                if (btn.textContent.trim() === catName) {
+                    btn.className = 'exp-chip px-2.5 py-1.5 rounded-lg border border-rose-600 bg-rose-600 text-xs font-bold text-white shadow-2xs';
+                } else {
+                    btn.className = 'exp-chip px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700';
+                }
+            });
+        }
+
+        function selectExpPayMode(mode) {
+            selectedExpPayMode = mode;
+            document.getElementById('expPmBtn-Cash').className = mode === 'Cash'
+                ? 'py-2 px-3 rounded-xl font-bold text-xs border border-rose-600 bg-rose-600 text-white'
+                : 'py-2 px-3 rounded-xl font-bold text-xs border border-slate-300 bg-white text-slate-700';
+            document.getElementById('expPmBtn-UPI').className = mode === 'UPI'
+                ? 'py-2 px-3 rounded-xl font-bold text-xs border border-rose-600 bg-rose-600 text-white'
+                : 'py-2 px-3 rounded-xl font-bold text-xs border border-slate-300 bg-white text-slate-700';
+        }
+
+        function saveExpenseFromModal() {
+            const editId = document.getElementById('editExpenseId').value;
+            const category = (document.getElementById('expCategoryInput').value || '').trim() || '📝 अन्य खर्च';
+            const amount = parseFloat(document.getElementById('expAmountInput').value);
+            const isoDate = document.getElementById('expDateInput').value || new Date().toISOString().split('T')[0];
+            const note = (document.getElementById('expNoteInput').value || '').trim();
+
+            if (isNaN(amount) || amount <= 0) {
+                showToast('कृपया खर्च की सही रकम (₹) डालें', 'fa-circle-exclamation text-amber-400');
+                return;
+            }
+
+            const dateObj = new Date(isoDate + 'T12:00:00');
+            const dateStr = isNaN(dateObj) ? isoDate : dateObj.toLocaleDateString('hi-IN');
+
+            if (editId) {
+                const idx = expenses.findIndex(x => x.id === editId);
+                if (idx > -1) {
+                    expenses[idx].category = category;
+                    expenses[idx].amount = amount;
+                    expenses[idx].isoDate = isoDate;
+                    expenses[idx].dateStr = dateStr;
+                    expenses[idx].payMode = selectedExpPayMode;
+                    expenses[idx].note = note;
+                }
+                showToast('खर्च अपडेट कर दिया गया');
+            } else {
+                const now = new Date();
+                expenses.unshift({
+                    id: 'exp_' + Date.now(),
+                    category,
+                    amount,
+                    isoDate,
+                    dateStr,
+                    timeStr: now.toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit' }),
+                    payMode: selectedExpPayMode,
+                    note
+                });
+                speakHindi(`${amount} रुपये खर्च जोड़ा गया`);
+                showToast(`₹${amount} का खर्च सेव हो गया`);
+            }
+
+            saveAppState();
+            closeModal('expenseModal');
+            renderExpensesList();
+        }
+
+        function confirmDeleteExpense(expId) {
+            const ex = expenses.find(x => x.id === expId);
+            if (!ex) return;
+
+            document.getElementById('confirmDialogTitle').textContent = `खर्च "${ex.category}" (₹${ex.amount}) हटाएं?`;
+            document.getElementById('confirmDialogText').textContent = 'यह खर्च हिसाब और गल्ले की रिपोर्ट से हट जाएगा।';
+            document.getElementById('restoreStockCheckboxWrap').classList.add('hidden');
+
+            const btn = document.getElementById('confirmDialogActionBtn');
+            btn.onclick = function () {
+                expenses = expenses.filter(x => x.id !== expId);
+                saveAppState();
+                closeModal('confirmDialogModal');
+                renderExpensesList();
+                showToast('खर्च हटा दिया गया');
+            };
+
+            openModal('confirmDialogModal');
+        }
+
+        function renderExpensesList() {
+            const container = document.getElementById('expensesListContainer');
+            const todayISO = new Date().toISOString().split('T')[0];
+
+            const filtered = expenseFilter === 'today'
+                ? expenses.filter(e => e.isoDate === todayISO)
+                : expenses;
+
+            let totalAmt = 0;
+            filtered.forEach(e => totalAmt += e.amount);
+
+            document.getElementById('expenseSummaryLabel').textContent = expenseFilter === 'today' ? 'आज का कुल दुकान खर्च (Today)' : 'अब तक का कुल खर्च (All Time)';
+            document.getElementById('expenseSummaryTotal').textContent = `₹${totalAmt.toLocaleString('en-IN')}`;
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center space-y-2.5">
+                        <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center mx-auto text-xl">
+                            <i class="fa-solid fa-mug-hot"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-800 text-sm">${expenseFilter === 'today' ? 'आज अभी तक कोई खर्च नहीं लिखा गया' : 'कोई खर्च रिकॉर्ड नहीं है'}</h3>
+                        <p class="text-xs text-slate-500">चाय-नाश्ता, भाड़ा या दुकान का कोई भी खर्च ऊपर बटन दबाकर तुरंत लिखें।</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '';
+            filtered.forEach(ex => {
+                const modeBadge = ex.payMode === 'Cash'
+                    ? `<span class="bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded">💵 गल्ले से नकद</span>`
+                    : `<span class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded">📱 ऑनलाइन (UPI)</span>`;
+
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl p-3.5 border border-slate-200 shadow-2xs flex items-center justify-between gap-3';
+                card.innerHTML = `
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-slate-900 text-sm">${ex.category}</span>
+                            ${modeBadge}
+                        </div>
+                        ${ex.note ? `<p class="text-xs text-slate-600 mt-1">${ex.note}</p>` : ''}
+                        <p class="text-[11px] text-slate-400 num-font mt-1">${ex.dateStr} ${ex.timeStr ? '• ' + ex.timeStr : ''}</p>
+                    </div>
+                    <div class="text-right shrink-0 flex flex-col items-end gap-2">
+                        <span class="text-base sm:text-lg font-extrabold num-font text-rose-600">-₹${ex.amount}</span>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="openExpenseModal('${ex.id}')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px] flex items-center gap-1 touch-btn">
+                                <i class="fa-solid fa-pen text-[10px]"></i> सुधारें
+                            </button>
+                            <button onclick="confirmDeleteExpense('${ex.id}')" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold text-[11px] flex items-center gap-1 touch-btn">
+                                <i class="fa-solid fa-trash-can text-[10px]"></i> हटाएं
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // ==========================================
+        // TAB 1: POS BILLING GRID & ATOMIC STOCK LOGIC
+        // ==========================================
+        function getEffectiveAvailableStock(prodId) {
+            const p = products.find(x => x.id === prodId);
+            const baseStock = p ? p.stock : 0;
+            if (!editingBillId) return baseStock;
+
+            // If editing an existing bill, the original bill's quantity for this item is also available
+            const origBill = bills.find(b => b.id === editingBillId);
+            if (!origBill) return baseStock;
+            const origItem = origBill.items.find(i => i.id === prodId);
+            return baseStock + (origItem ? origItem.qty : 0);
+        }
+
+        function renderPOSCategories() {
+            const container = document.getElementById('posCategoryPills');
+            if (products.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            const cats = ['ALL', ...new Set(products.map(p => p.category || 'हैंडलूम'))];
+            container.innerHTML = '';
+            cats.forEach(c => {
+                const isActive = activeCategory === c;
+                const btn = document.createElement('button');
+                btn.className = isActive
+                    ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 text-white shrink-0 shadow-2xs'
+                    : 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-600 border border-slate-200 shrink-0';
+                btn.textContent = c === 'ALL' ? 'सभी आइटम (All)' : c;
+                btn.onclick = () => {
+                    activeCategory = c;
+                    renderPOSCategories();
+                    renderPOSGrid();
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function renderPOSGrid() {
+            const container = document.getElementById('posProductsContainer');
+            const query = (document.getElementById('posSearch').value || '').trim().toLowerCase();
+
+            // Clean Empty State if 0 products
+            if (products.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-3 my-2 shadow-2xs">
+                        <div class="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center mx-auto text-2xl">
+                            <i class="fa-solid fa-store"></i>
+                        </div>
+                        <div class="space-y-1">
+                            <h3 class="font-bold text-slate-900 text-base sm:text-lg">महेनूर हैंडलूम (बेलहरा ब्रांच) पीओएस तैयार है!</h3>
+                            <p class="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                                अभी गोदाम में कोई सामान दर्ज नहीं है। अपनी दुकान का पहला सामान (चादर, कंबल, तौलिया आदि फोटो और रेट के साथ) जोड़ने के लिए नीचे बटन दबाएं।
+                            </p>
+                        </div>
+                        <div class="pt-2">
+                            <button onclick="openProductModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-3 rounded-xl text-xs sm:text-sm inline-flex items-center gap-2 shadow-md touch-btn">
+                                <i class="fa-solid fa-plus-circle"></i>
+                                <span>+ नया सामान जोड़ें (Add First Item)</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const filtered = products.filter(p => {
+                const matchesCat = activeCategory === 'ALL' || (p.category || 'हैंडलूम') === activeCategory;
+                const matchesQuery = p.name.toLowerCase().includes(query);
+                return matchesCat && matchesQuery;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="bg-white rounded-xl p-6 text-center text-xs font-semibold text-slate-400 border border-slate-200">कोई आइटम नहीं मिला</div>`;
+                return;
+            }
+
+            let html = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">`;
+            filtered.forEach(p => {
+                const inCart = cart.find(c => c.id === p.id);
+                const qtyInCart = inCart ? inCart.qty : 0;
+                const availStock = getEffectiveAvailableStock(p.id);
+
+                const imgSection = p.image
+                    ? `<img src="${p.image}" alt="${p.name}" class="w-full h-28 sm:h-32 object-cover rounded-t-xl border-b border-slate-100">`
+                    : `<div class="w-full h-28 sm:h-32 bg-slate-100 rounded-t-xl border-b border-slate-200 flex flex-col items-center justify-center text-slate-400">
+                           <i class="fa-solid fa-layer-group text-xl mb-1"></i>
+                           <span class="text-[10px] font-medium">${p.category || 'हैंडलूम'}</span>
+                       </div>`;
+
+                const stockBadge = availStock <= 0
+                    ? `<span class="absolute top-2 left-2 bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-xs">स्टॉक खत्म (0)</span>`
+                    : `<span class="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-semibold px-2 py-0.5 rounded-md num-font">स्टॉक: ${availStock}</span>`;
+
+                const cartBadge = qtyInCart > 0
+                    ? `<span class="absolute top-2 right-2 bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold num-font shadow-md ring-2 ring-white">${qtyInCart}</span>`
+                    : '';
+
+                html += `
+                    <div onclick="tapProductForBill('${p.id}')" class="bg-white rounded-xl border ${qtyInCart > 0 ? 'border-blue-600 ring-2 ring-blue-500/30' : 'border-slate-200'} shadow-2xs overflow-hidden flex flex-col justify-between cursor-pointer touch-btn relative">
+                        <div>
+                            <div class="relative">
+                                ${imgSection}
+                                ${stockBadge}
+                                ${cartBadge}
+                            </div>
+                            <div class="p-2.5">
+                                <h4 class="font-bold text-slate-800 text-xs sm:text-sm line-clamp-1">${p.name}</h4>
+                                <div class="flex items-center justify-between mt-1.5">
+                                    <span class="text-sm sm:text-base font-extrabold num-font text-emerald-700">₹${p.price}</span>
+                                    <span class="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">+ बिल में जोड़ें</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        function tapProductForBill(prodId) {
+            const p = products.find(x => x.id === prodId);
+            if (!p) return;
+
+            const availStock = getEffectiveAvailableStock(prodId);
+            const existing = cart.find(c => c.id === prodId);
+            const currentQty = existing ? existing.qty : 0;
+
+            if (currentQty + 1 > availStock) {
+                showToast(`"${p.name}" का केवल ${availStock} पीस स्टॉक में है!`, 'fa-triangle-exclamation text-amber-400');
+                return;
+            }
+
+            if (existing) {
+                existing.qty += 1;
+            } else {
+                cart.push({
+                    id: p.id,
+                    name: p.name,
+                    price: p.price,
+                    cost: p.cost,
+                    qty: 1
+                });
+            }
+
+            renderPOSGrid();
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            const floatBar = document.getElementById('floatingCartBar');
+            const isPosVisible = !document.getElementById('view-pos').classList.contains('hidden');
+
+            if (cart.length === 0 || !isPosVisible) {
+                floatBar.classList.add('hidden');
+            } else {
+                floatBar.classList.remove('hidden');
+            }
+
+            let totalQty = 0;
+            let totalAmt = 0;
+            cart.forEach(c => {
+                totalQty += c.qty;
+                totalAmt += (c.qty * c.price);
+            });
+
+            document.getElementById('floatCartCount').textContent = totalQty;
+            document.getElementById('floatCartTotal').textContent = `₹${totalAmt.toLocaleString('en-IN')}`;
+        }
+
+        function clearCart() {
+            cart = [];
+            if (editingBillId) cancelBillEditMode();
+            renderPOSGrid();
+            updateCartUI();
+        }
+
+        // ==========================================
+        // CHECKOUT SHEET & FOCUS-SAFE IN-PLACE EDITING
+        // ==========================================
+        function openCheckoutSheet() {
+            if (cart.length === 0) return;
+
+            document.getElementById('checkoutSheetTitle').innerHTML = editingBillId
+                ? `<i class="fa-solid fa-pen-to-square text-amber-400"></i><span>पुराना बिल सुधारें (Update Bill)</span>`
+                : `<i class="fa-solid fa-receipt text-emerald-400"></i><span>ग्राहक का बिल बनाएं (Checkout)</span>`;
+
+            renderCheckoutSheetItems();
+            const modal = document.getElementById('checkoutSheetModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeCheckoutSheet() {
+            const modal = document.getElementById('checkoutSheetModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function renderCheckoutSheetItems() {
+            const list = document.getElementById('checkoutItemsList');
+            list.innerHTML = '';
+
+            if (cart.length === 0) {
+                closeCheckoutSheet();
+                renderPOSGrid();
+                updateCartUI();
+                return;
+            }
+
+            cart.forEach((item, idx) => {
+                const row = document.createElement('div');
+                row.className = 'py-2.5 flex items-center justify-between gap-2';
+                row.innerHTML = `
+                    <div class="min-w-0 flex-1">
+                        <p class="font-bold text-slate-800 text-xs sm:text-sm truncate">${item.name}</p>
+                        <div class="flex items-center gap-1.5 mt-1">
+                            <span class="text-[11px] text-slate-500">बिक्री रेट ₹:</span>
+                            <input type="number" value="${item.price}" oninput="updateCheckoutItemRateInPlace(${idx}, this.value)" class="w-20 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold num-font text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="changeCheckoutQty(${idx}, -1)" class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 font-bold text-sm flex items-center justify-center touch-btn">-</button>
+                        <span id="checkout-item-qty-${idx}" class="w-6 text-center font-bold num-font text-xs sm:text-sm">${item.qty}</span>
+                        <button type="button" onclick="changeCheckoutQty(${idx}, 1)" class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-sm flex items-center justify-center touch-btn">+</button>
+                    </div>
+
+                    <div id="checkout-item-total-${idx}" class="w-16 text-right font-extrabold num-font text-xs sm:text-sm text-slate-900">
+                        ₹${item.qty * item.price}
+                    </div>
+                `;
+                list.appendChild(row);
+            });
+
+            recalcCheckoutTotals();
+        }
+
+        function changeCheckoutQty(idx, delta) {
+            const item = cart[idx];
+            if (!item) return;
+
+            if (delta > 0) {
+                const avail = getEffectiveAvailableStock(item.id);
+                if (item.qty + delta > avail) {
+                    showToast(`"${item.name}" का केवल ${avail} पीस उपलब्ध है!`, 'fa-triangle-exclamation text-amber-400');
+                    return;
+                }
+            }
+
+            item.qty += delta;
+            if (item.qty <= 0) {
+                cart.splice(idx, 1);
+                renderCheckoutSheetItems();
+            } else {
+                // Update in-place without destroying DOM
+                const qtyEl = document.getElementById(`checkout-item-qty-${idx}`);
+                const totEl = document.getElementById(`checkout-item-total-${idx}`);
+                if (qtyEl) qtyEl.textContent = item.qty;
+                if (totEl) totEl.textContent = `₹${item.qty * item.price}`;
+                recalcCheckoutTotals();
+            }
+            renderPOSGrid();
+            updateCartUI();
+        }
+
+        // BUG FIX: Updates line total & grand total in-place without re-rendering input DOM so mobile keyboard never closes!
+        function updateCheckoutItemRateInPlace(idx, val) {
+            const num = parseFloat(val);
+            cart[idx].price = (!isNaN(num) && num >= 0) ? num : 0;
+            const totEl = document.getElementById(`checkout-item-total-${idx}`);
+            if (totEl) {
+                totEl.textContent = `₹${cart[idx].qty * cart[idx].price}`;
+            }
+            recalcCheckoutTotals();
+            updateCartUI();
+        }
+
+        function selectPayMode(mode) {
+            selectedPayMode = mode;
+            ['Cash', 'UPI', 'Udhaar'].forEach(m => {
+                const btn = document.getElementById('pmBtn-' + m);
+                if (m === mode) {
+                    btn.className = 'py-2 px-2 rounded-lg font-bold text-xs border border-emerald-600 bg-emerald-600 text-white';
+                } else {
+                    btn.className = 'py-2 px-2 rounded-lg font-bold text-xs border border-slate-300 bg-white text-slate-700';
+                }
+            });
+        }
+
+        function recalcCheckoutTotals() {
+            let sub = 0;
+            let totalCost = 0;
+            cart.forEach(c => {
+                sub += (c.qty * c.price);
+                totalCost += (c.qty * (c.cost || 0));
+            });
+
+            const disc = parseFloat(document.getElementById('checkoutDiscount').value) || 0;
+            const grand = Math.max(0, sub - disc);
+            const profit = grand - totalCost;
+
+            document.getElementById('checkoutGrandTotal').textContent = `₹${grand.toLocaleString('en-IN')}`;
+            document.getElementById('checkoutProfitPreview').textContent = `इस बिल पर मुनाफा: ₹${profit}`;
+        }
+
+        // ATOMIC BILL SAVE & UPDATE (Stock only mutates when saving)
+        function saveAndProcessBill(autoShareWhatsApp) {
+            if (cart.length === 0) return;
+
+            // Validate stock availability for all cart items first
+            for (const item of cart) {
+                const avail = getEffectiveAvailableStock(item.id);
+                if (item.qty > avail) {
+                    showToast(`"${item.name}" का स्टॉक कम है (उपलब्ध: ${avail})`, 'fa-triangle-exclamation text-amber-400');
+                    return;
+                }
+            }
+
+            const custPhone = (document.getElementById('billCustPhone').value || '').replace(/\D/g, '');
+            const custName = (document.getElementById('billCustName').value || '').trim() || 'ग्राहक (Walk-in)';
+            const discount = parseFloat(document.getElementById('checkoutDiscount').value) || 0;
+
+            let subTotal = 0;
+            let totalCost = 0;
+            cart.forEach(c => {
+                subTotal += (c.qty * c.price);
+                totalCost += (c.qty * (c.cost || 0));
+            });
+
+            const grandTotal = Math.max(0, subTotal - discount);
+            const netProfit = grandTotal - totalCost;
+
+            let savedBillObj = null;
+
+            if (editingBillId) {
+                const oldBillIdx = bills.findIndex(b => b.id === editingBillId);
+                if (oldBillIdx > -1) {
+                    const oldBill = bills[oldBillIdx];
+                    // Step 1: Restore original bill's quantities back to stock
+                    oldBill.items.forEach(oldItem => {
+                        const prod = products.find(p => p.id === oldItem.id);
+                        if (prod) prod.stock += oldItem.qty;
+                    });
+
+                    // Step 2: Deduct updated cart quantities from stock
+                    cart.forEach(newItem => {
+                        const prod = products.find(p => p.id === newItem.id);
+                        if (prod) prod.stock = Math.max(0, prod.stock - newItem.qty);
+                    });
+
+                    // Step 3: Update bill fields atomically
+                    oldBill.custName = custName;
+                    oldBill.custPhone = custPhone;
+                    oldBill.items = JSON.parse(JSON.stringify(cart));
+                    oldBill.subTotal = subTotal;
+                    oldBill.discount = discount;
+                    oldBill.total = grandTotal;
+                    oldBill.cost = totalCost;
+                    oldBill.profit = netProfit;
+                    oldBill.payMode = selectedPayMode;
+                    savedBillObj = oldBill;
+                }
+                editingBillId = null;
+                document.getElementById('editingBillBanner').classList.add('hidden');
+                speakHindi(`बिल अपडेट हो गया, कुल रकम ${grandTotal} रुपये`);
+                showToast('बिल और स्टॉक सफलतापूर्वक अपडेट हो गए!');
+            } else {
+                // Deduct stock for new bill
+                cart.forEach(item => {
+                    const prod = products.find(p => p.id === item.id);
+                    if (prod) prod.stock = Math.max(0, prod.stock - item.qty);
+                });
+
+                const now = new Date();
+                const nextBillNo = bills.length > 0 ? Math.max(...bills.map(b => b.billNo || 100)) + 1 : 101;
+
+                savedBillObj = {
+                    id: 'bill_' + Date.now(),
+                    billNo: nextBillNo,
+                    isoDate: now.toISOString().split('T')[0],
+                    dateStr: now.toLocaleDateString('hi-IN'),
+                    timeStr: now.toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit' }),
+                    custName,
+                    custPhone,
+                    items: JSON.parse(JSON.stringify(cart)),
+                    subTotal,
+                    discount,
+                    total: grandTotal,
+                    cost: totalCost,
+                    profit: netProfit,
+                    payMode: selectedPayMode
+                };
+
+                bills.unshift(savedBillObj);
+                speakHindi(`बिल सेव हो गया, कुल ${grandTotal} रुपये`);
+                showToast(`बिल #${savedBillObj.billNo} सेव हो गया!`);
+            }
+
+            // Reset Checkout Form
+            cart = [];
+            document.getElementById('billCustPhone').value = '';
+            document.getElementById('billCustName').value = '';
+            document.getElementById('checkoutDiscount').value = 0;
+            selectPayMode('Cash');
+
+            saveAppState();
+            closeCheckoutSheet();
+            renderPOSGrid();
+            updateCartUI();
+
+            if (savedBillObj) {
+                openInvoicePdfModal(savedBillObj.id, autoShareWhatsApp);
+            }
+        }
+
+        // ==========================================
+        // TAB 4: BILLS HISTORY, EDIT & DELETE BILLS
+        // ==========================================
+        function renderBillsList() {
+            const container = document.getElementById('billsListContainer');
+            const query = (document.getElementById('billSearchInput').value || '').trim().toLowerCase();
+            document.getElementById('totalBillsCountBadge').textContent = `${bills.length} Bills`;
+
+            if (bills.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center space-y-2">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-xl">
+                            <i class="fa-solid fa-file-invoice"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-800 text-sm">अभी तक कोई बिल नहीं कटा है</h3>
+                        <p class="text-xs text-slate-500">जब आप बिलिंग (POS) से बिल सेव करेंगे, तो सभी बिल यहाँ दिखेंगे।</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const filtered = bills.filter(b =>
+                b.custName.toLowerCase().includes(query) ||
+                (b.custPhone && b.custPhone.includes(query)) ||
+                String(b.billNo).includes(query)
+            );
+
+            container.innerHTML = '';
+            filtered.forEach(b => {
+                const itemsText = b.items.map(i => `${i.name} (${i.qty})`).join(', ');
+                const payBadge = b.payMode === 'Cash'
+                    ? `<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded">💵 नकद (Cash)</span>`
+                    : b.payMode === 'UPI'
+                        ? `<span class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded">📱 ऑनलाइन (UPI)</span>`
+                        : `<span class="bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold px-2 py-0.5 rounded">📒 उधार (Udhaar)</span>`;
+
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl p-3.5 border border-slate-200 shadow-2xs space-y-2.5';
+                card.innerHTML = `
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-extrabold num-font text-xs bg-slate-900 text-white px-2 py-0.5 rounded">INV #${b.billNo}</span>
+                                <span class="text-xs text-slate-400 num-font">${b.dateStr} • ${b.timeStr}</span>
+                                ${payBadge}
+                            </div>
+                            <h4 class="font-bold text-slate-900 text-sm mt-1.5">${b.custName} ${b.custPhone ? `<span class="text-xs font-semibold text-emerald-700 num-font">(+91 ${b.custPhone})</span>` : ''}</h4>
+                            <p class="text-xs text-slate-500 line-clamp-1 mt-0.5">${itemsText}</p>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <span class="text-base sm:text-lg font-extrabold num-font text-slate-900 block">₹${b.total}</span>
+                            <span class="text-[11px] font-semibold text-emerald-600 num-font">बचत: ₹${b.profit}</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                        <button onclick="openInvoicePdfModal('${b.id}', false)" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs touch-btn">
+                            <i class="fa-solid fa-file-pdf"></i>
+                            <span>PDF / WhatsApp</span>
+                        </button>
+
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="loadBillForEditing('${b.id}')" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center gap-1 touch-btn">
+                                <i class="fa-solid fa-pen text-[10px]"></i> सुधारें (Edit)
+                            </button>
+                            <button onclick="confirmDeleteBill('${b.id}')" class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold text-xs flex items-center gap-1 touch-btn">
+                                <i class="fa-solid fa-trash-can text-[10px]"></i> हटाएं
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // BUG FIX: Does NOT mutate stock until bill is saved; cancelling leaves stock untouched
+        function loadBillForEditing(billId) {
+            const b = bills.find(x => x.id === billId);
+            if (!b) return;
+
+            editingBillId = b.id;
+            cart = JSON.parse(JSON.stringify(b.items));
+
+            document.getElementById('billCustName').value = b.custName === 'ग्राहक (Walk-in)' ? '' : b.custName;
+            document.getElementById('billCustPhone').value = b.custPhone || '';
+            document.getElementById('checkoutDiscount').value = b.discount || 0;
+            selectPayMode(b.payMode || 'Cash');
+
+            const banner = document.getElementById('editingBillBanner');
+            banner.classList.remove('hidden');
+            document.getElementById('editingBillBannerText').textContent = `⚠️ आप बिल #${b.billNo} (${b.custName}) में सुधार कर रहे हैं`;
+
+            switchView('pos');
+            openCheckoutSheet();
+            showToast(`बिल #${b.billNo} सुधारने के लिए खुल गया है`);
+        }
+
+        function cancelBillEditMode() {
+            editingBillId = null;
+            cart = [];
+            document.getElementById('editingBillBanner').classList.add('hidden');
+            document.getElementById('billCustName').value = '';
+            document.getElementById('billCustPhone').value = '';
+            document.getElementById('checkoutDiscount').value = 0;
+            closeCheckoutSheet();
+            renderPOSGrid();
+            updateCartUI();
+            showToast('बिल सुधार रद्द कर दिया गया (स्टॉक सुरक्षित है)');
+        }
+
+        function confirmDeleteBill(billId) {
+            const b = bills.find(x => x.id === billId);
+            if (!b) return;
+
+            document.getElementById('confirmDialogTitle').textContent = `बिल #${b.billNo} (${b.custName}) को डिलीट करें?`;
+            document.getElementById('confirmDialogText').textContent = `कुल रकम ₹${b.total} का यह बिल हिस्ट्री और मुनाफे के हिसाब से हट जाएगा।`;
+            document.getElementById('restoreStockCheckboxWrap').classList.remove('hidden');
+            document.getElementById('restoreStockCheckbox').checked = true;
+
+            const btn = document.getElementById('confirmDialogActionBtn');
+            btn.onclick = function () {
+                const restore = document.getElementById('restoreStockCheckbox').checked;
+                if (restore) {
+                    b.items.forEach(item => {
+                        const prod = products.find(p => p.id === item.id);
+                        if (prod) prod.stock += item.qty;
+                    });
+                }
+                if (editingBillId === billId) cancelBillEditMode();
+                bills = bills.filter(x => x.id !== billId);
+                saveAppState();
+                closeModal('confirmDialogModal');
+                renderBillsList();
+                renderPOSGrid();
+                showToast(`बिल #${b.billNo} डिलीट कर दिया गया`);
+            };
+
+            openModal('confirmDialogModal');
+        }
+
+        // ==========================================
+        // TRUE PDF INVOICE GENERATION (html2canvas + jsPDF)
+        // ==========================================
+        function openInvoicePdfModal(billId, autoTriggerPdf = false) {
+            const b = bills.find(x => x.id === billId);
+            if (!b) return;
+            activeInvoiceBill = b;
+
+            document.getElementById('invShopPhoneLine').textContent = settings.shopPhone ? `संपर्क नंबर: +91 ${settings.shopPhone}` : '';
+            document.getElementById('invNumberText').textContent = `INV #${b.billNo}`;
+            document.getElementById('invDateText').textContent = `${b.dateStr} | ${b.timeStr}`;
+            document.getElementById('invCustName').textContent = b.custName;
+            document.getElementById('invCustPhone').textContent = b.custPhone ? `मोबाइल: +91 ${b.custPhone}` : '';
+            document.getElementById('invPayMode').textContent = b.payMode === 'Cash' ? 'नकद (Cash)' : b.payMode === 'UPI' ? 'ऑनलाइन (UPI)' : 'उधार (Credit)';
+
+            const tbody = document.getElementById('invItemsTableBody');
+            tbody.innerHTML = '';
+            b.items.forEach((it, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-1.5 text-slate-500">${idx + 1}</td>
+                    <td class="py-1.5 font-bold text-slate-900">${it.name}</td>
+                    <td class="py-1.5 text-center font-semibold">${it.qty}</td>
+                    <td class="py-1.5 text-right">₹${it.price}</td>
+                    <td class="py-1.5 text-right font-extrabold text-slate-900">₹${it.qty * it.price}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            const sub = b.subTotal || (b.total + (b.discount || 0));
+            document.getElementById('invSubTotal').textContent = `₹${sub}`;
+            document.getElementById('invDiscount').textContent = `-₹${b.discount || 0}`;
+            document.getElementById('invDiscountRow').style.display = b.discount > 0 ? 'flex' : 'none';
+            document.getElementById('invGrandTotal').textContent = `₹${b.total}`;
+
+            openModal('invoicePdfModal');
+
+            if (autoTriggerPdf) {
+                setTimeout(() => {
+                    generateAndSharePDF();
+                }, 400);
+            }
+        }
+
+        async function generateAndSharePDF() {
+            if (!activeInvoiceBill) return;
+            const b = activeInvoiceBill;
+            const element = document.getElementById('invoice-print-area');
+            const fileName = `Mahenoor_Bill_${b.billNo}.pdf`;
+
+            const shareBtn = document.getElementById('btnSharePdfWhatsapp');
+            const originalHtml = shareBtn.innerHTML;
+            shareBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>PDF बिल तैयार हो रहा है...</span>`;
+            shareBtn.disabled = true;
+
+            try {
+                // Capture #invoice-print-area at 2x resolution so Hindi & English text is crystal clear
+                const canvas = await html2canvas(element, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    logging: false
+                });
+
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                const { jsPDF } = window.jspdf;
+
+                // Calculate PDF dimensions matching the receipt aspect ratio on an A4 width (148mm A5 width)
+                const pdfWidth = 148;
+                const pdfHeight = Math.max(180, (canvas.height * pdfWidth) / canvas.width + 16);
+
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: [pdfWidth, pdfHeight]
+                });
+
+                const renderImgHeight = (canvas.height * (pdfWidth - 12)) / canvas.width;
+                pdf.addImage(imgData, 'JPEG', 6, 6, pdfWidth - 12, renderImgHeight);
+
+                const pdfBlob = pdf.output('blob');
+                const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+                // 1. Try native mobile file share sheet (Android / iOS WhatsApp direct PDF attachment)
+                let sharedViaNative = false;
+                if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+                    try {
+                        await navigator.share({
+                            files: [pdfFile],
+                            title: `Mahenoor Handloom Bill #${b.billNo}`,
+                            text: `महेनूर हैंडलूम (बेलहरा ब्रांच) - बिल #${b.billNo} (${b.custName}) कुल रकम: ₹${b.total}`
+                        });
+                        sharedViaNative = true;
+                        showToast('PDF बिल WhatsApp पर शेयर हो गया!');
+                    } catch (shareErr) {
+                        // User cancelled share sheet or browser blocked; fallback to download
+                    }
+                }
+
+                // 2. Always save/download PDF as reliable fallback if native share wasn't completed
+                if (!sharedViaNative) {
+                    pdf.save(fileName);
+                    showToast(`PDF बिल (${fileName}) डाउनलोड हो गया!`);
+                    if (b.custPhone && b.custPhone.length === 10) {
+                        setTimeout(() => {
+                            openDirectWhatsAppChat();
+                        }, 600);
+                    }
+                }
+            } catch (err) {
+                console.error('PDF Generation Error:', err);
+                showToast('PDF बनाने में समस्या आई, सीधा WhatsApp चैट खुल रहा है', 'fa-triangle-exclamation text-amber-400');
+                openDirectWhatsAppChat();
+            } finally {
+                shareBtn.innerHTML = originalHtml;
+                shareBtn.disabled = false;
+            }
+        }
+
+        function openDirectWhatsAppChat() {
+            if (!activeInvoiceBill) return;
+            const b = activeInvoiceBill;
+
+            let msg = `*MAHENOOR HANDLOOM (महेनूर हैंडलूम)*\n`;
+            msg += `📍 मेन मार्केट, बेलहरा ब्रांच\n`;
+            msg += `--------------------------------\n`;
+            msg += `🧾 *बिल नं:* #${b.billNo}\n`;
+            msg += `📅 *तारीख:* ${b.dateStr} (${b.timeStr})\n`;
+            msg += `👤 *ग्राहक:* ${b.custName}\n`;
+            msg += `--------------------------------\n`;
+            b.items.forEach((it, i) => {
+                msg += `${i + 1}. *${it.name}* — ${it.qty} x ₹${it.price} = *₹${it.qty * it.price}*\n`;
+            });
+            msg += `--------------------------------\n`;
+            if (b.discount > 0) {
+                msg += `🎁 विशेष छूट: -₹${b.discount}\n`;
+            }
+            msg += `💰 *कुल रकम (Grand Total): ₹${b.total}*\n`;
+            msg += `💳 पेमेंट: ${b.payMode === 'Cash' ? 'नकद (Cash)' : b.payMode === 'UPI' ? 'ऑनलाइन (UPI)' : 'उधार (Credit)'}\n`;
+            msg += `--------------------------------\n`;
+            msg += `🙏 *धन्यवाद! पक्का PDF बिल साथ में संलग्न (Attach) है।*`;
+
+            const phone = (b.custPhone && b.custPhone.length === 10) ? `91${b.custPhone}` : '';
+            const waUrl = phone
+                ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
+                : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+            window.open(waUrl, '_blank');
+        }
+
+        // ==========================================
+        // TAB 5: ACCURATE PROFIT, GALLA & OWNER REPORT
+        // ==========================================
+        function setProfitFilter(range) {
+            profitFilter = range;
+            ['today', 'yesterday', 'month', 'all'].forEach(r => {
+                const btn = document.getElementById('profFilter-' + r);
+                if (r === range) {
+                    btn.className = 'prof-filter-btn py-2 rounded-lg text-xs font-bold bg-slate-900 text-white';
+                } else {
+                    btn.className = 'prof-filter-btn py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100';
+                }
+            });
+            renderProfitAnalytics();
+        }
+
+        function toggleProfitPrivacy() {
+            showProfitNumbers = !showProfitNumbers;
+            document.getElementById('profitEyeIcon').className = showProfitNumbers ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash';
+            renderProfitAnalytics();
+        }
+
+        function getFilteredDataByPeriod() {
+            const now = new Date();
+            const todayISO = now.toISOString().split('T')[0];
+
+            const yestDate = new Date(now);
+            yestDate.setDate(now.getDate() - 1);
+            const yesterdayISO = yestDate.toISOString().split('T')[0];
+
+            const currentMonthPrefix = todayISO.slice(0, 7); // YYYY-MM
+
+            let filteredBills = bills;
+            let filteredExpenses = expenses;
+
+            if (profitFilter === 'today') {
+                filteredBills = bills.filter(b => b.isoDate === todayISO);
+                filteredExpenses = expenses.filter(e => e.isoDate === todayISO);
+            } else if (profitFilter === 'yesterday') {
+                filteredBills = bills.filter(b => b.isoDate === yesterdayISO);
+                filteredExpenses = expenses.filter(e => e.isoDate === yesterdayISO);
+            } else if (profitFilter === 'month') {
+                filteredBills = bills.filter(b => (b.isoDate || '').startsWith(currentMonthPrefix));
+                filteredExpenses = expenses.filter(e => (e.isoDate || '').startsWith(currentMonthPrefix));
+            }
+
+            return { filteredBills, filteredExpenses };
+        }
+
+        function renderProfitAnalytics() {
+            const { filteredBills, filteredExpenses } = getFilteredDataByPeriod();
+
+            let totalSales = 0, totalCost = 0, grossProfit = 0;
+            let cashSales = 0, upiSales = 0, udhaarSales = 0;
+            const itemMap = {};
+
+            filteredBills.forEach(b => {
+                totalSales += b.total;
+                totalCost += b.cost;
+                grossProfit += b.profit;
+
+                if (b.payMode === 'Cash') cashSales += b.total;
+                else if (b.payMode === 'UPI') upiSales += b.total;
+                else udhaarSales += b.total;
+
+                b.items.forEach(it => {
+                    if (!itemMap[it.name]) {
+                        itemMap[it.name] = { qty: 0, revenue: 0, profit: 0 };
+                    }
+                    const itemRev = it.qty * it.price;
+                    const itemCost = it.qty * (it.cost || 0);
+                    itemMap[it.name].qty += it.qty;
+                    itemMap[it.name].revenue += itemRev;
+                    itemMap[it.name].profit += (itemRev - itemCost);
+                });
+            });
+
+            let totalExpenses = 0;
+            let cashExpenses = 0;
+            filteredExpenses.forEach(ex => {
+                totalExpenses += ex.amount;
+                if (ex.payMode === 'Cash') cashExpenses += ex.amount;
+            });
+
+            // True Net Profit = Gross Profit on Goods - Total Shop Expenses
+            const trueNetProfit = grossProfit - totalExpenses;
+            // Net Cash in Galla = Cash Sales - Cash Expenses
+            const netCashInGalla = cashSales - cashExpenses;
+
+            // Update 5 Executive Cards
+            document.getElementById('statTotalSales').textContent = `₹${totalSales.toLocaleString('en-IN')}`;
+            document.getElementById('statTotalBillsCount').textContent = `${filteredBills.length} बिल कटे`;
+
+            document.getElementById('statGrossProfit').textContent = showProfitNumbers ? `₹${grossProfit.toLocaleString('en-IN')}` : '₹•••••';
+            document.getElementById('statCostOfGoods').textContent = showProfitNumbers ? `लागत: ₹${totalCost.toLocaleString('en-IN')}` : 'लागत छुपी है';
+
+            document.getElementById('statTotalExpenses').textContent = `-₹${totalExpenses.toLocaleString('en-IN')}`;
+            document.getElementById('statExpenseCount').textContent = `${filteredExpenses.length} खर्च एंट्री`;
+
+            document.getElementById('statNetProfit').textContent = showProfitNumbers ? `₹${trueNetProfit.toLocaleString('en-IN')}` : '₹•••••';
+
+            document.getElementById('statNetCashInGalla').textContent = `₹${netCashInGalla.toLocaleString('en-IN')}`;
+            document.getElementById('statGallaBreakdown').textContent = `नकद बिक्री: ₹${cashSales} - नकद खर्च: ₹${cashExpenses}`;
+
+            document.getElementById('statCash').textContent = `₹${cashSales.toLocaleString('en-IN')}`;
+            document.getElementById('statUpi').textContent = `₹${upiSales.toLocaleString('en-IN')}`;
+            document.getElementById('statUdhaar').textContent = `₹${udhaarSales.toLocaleString('en-IN')}`;
+
+            // Render Item-wise Table
+            const tbody = document.getElementById('itemWiseProfitBody');
+            tbody.innerHTML = '';
+            const keys = Object.keys(itemMap);
+            if (keys.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400 font-semibold">इस अवधि में कोई बिक्री नहीं हुई</td></tr>`;
+                return;
+            }
+
+            keys.forEach(name => {
+                const row = itemMap[name];
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 font-bold text-slate-800">${name}</td>
+                    <td class="py-2.5 px-3 text-center num-font font-semibold">${row.qty}</td>
+                    <td class="py-2.5 px-3 text-right num-font font-semibold">₹${row.revenue}</td>
+                    <td class="py-2.5 px-3 text-right num-font font-bold text-emerald-700">${showProfitNumbers ? '₹' + row.profit : '••••'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function shareOwnerReportWhatsApp() {
+            const { filteredBills, filteredExpenses } = getFilteredDataByPeriod();
+            let sales = 0, grossProfit = 0, cashSales = 0, upiSales = 0, udhaarSales = 0;
+
+            filteredBills.forEach(b => {
+                sales += b.total;
+                grossProfit += b.profit;
+                if (b.payMode === 'Cash') cashSales += b.total;
+                else if (b.payMode === 'UPI') upiSales += b.total;
+                else udhaarSales += b.total;
+            });
+
+            let totalExp = 0, cashExp = 0;
+            filteredExpenses.forEach(e => {
+                totalExp += e.amount;
+                if (e.payMode === 'Cash') cashExp += e.amount;
+            });
+
+            const netProfit = grossProfit - totalExp;
+            const netGallaCash = cashSales - cashExp;
+            const lowItems = products.filter(p => p.stock <= 5).map(p => `${p.name} (${p.stock})`).join(', ') || 'सभी स्टॉक पर्याप्त है';
+
+            const periodLabels = { today: 'आज का हिसाब', yesterday: 'कल का हिसाब', month: 'इस महीने का हिसाब', all: 'कुल हिसाब' };
+
+            let report = `*MAHENOOR HANDLOOM - BELHARA BRANCH*\n`;
+            report += `📊 *${periodLabels[profitFilter]} (${new Date().toLocaleDateString('hi-IN')})*\n`;
+            report += `==============================\n`;
+            report += `🧾 कुल बिल कटे: *${filteredBills.length}*\n`;
+            report += `💰 *1. कुल बिक्री (Sales): ₹${sales}*\n`;
+            report += `🏷️ *2. माल पर मुनाफा: ₹${grossProfit}*\n`;
+            report += `☕ *3. कुल दुकान खर्च: -₹${totalExp}*\n`;
+            report += `✅ *4. असली शुद्ध मुनाफा: ₹${netProfit}*\n`;
+            report += `==============================\n`;
+            report += `🔐 *5. गल्ले में शुद्ध नकद (Cash in Hand): ₹${netGallaCash}*\n`;
+            report += `   (नकद बिक्री ₹${cashSales} - नकद खर्च ₹${cashExp})\n`;
+            report += `------------------------------\n`;
+            report += `📱 ऑनलाइन (UPI): ₹${upiSales}\n`;
+            report += `📒 उधार (Credit): ₹${udhaarSales}\n`;
+            report += `------------------------------\n`;
+            report += `⚠️ *कम स्टॉक अलर्ट:* ${lowItems}`;
+
+            const phone = settings.ownerPhone && settings.ownerPhone.length === 10 ? `91${settings.ownerPhone}` : '';
+            const url = phone
+                ? `https://wa.me/${phone}?text=${encodeURIComponent(report)}`
+                : `https://wa.me/?text=${encodeURIComponent(report)}`;
+            window.open(url, '_blank');
+        }
+
+        // ==========================================
+        // SETTINGS, JSON BACKUP & RESTORE
+        // ==========================================
+        function openSettingsModal() {
+            document.getElementById('settingOwnerPhone').value = settings.ownerPhone || '';
+            document.getElementById('settingShopPhone').value = settings.shopPhone || '';
+            openModal('settingsModal');
+        }
+
+        function saveSettings() {
+            settings.ownerPhone = (document.getElementById('settingOwnerPhone').value || '').replace(/\D/g, '');
+            settings.shopPhone = (document.getElementById('settingShopPhone').value || '').replace(/\D/g, '');
+            saveAppState();
+            closeModal('settingsModal');
+            showToast('सेटिंग्स सेव कर दी गईं');
+        }
+
+        function exportFullBackup() {
+            const payload = {
+                products,
+                bills,
+                expenses,
+                settings,
+                exportedAt: new Date().toISOString()
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Mahenoor_Belhara_Backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            showToast('पूरा डेटा बैकअप डाउनलोड हो गया!');
+        }
+
+        function importBackupFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (Array.isArray(data.products)) products = data.products;
+                    if (Array.isArray(data.bills)) bills = data.bills;
+                    if (Array.isArray(data.expenses)) expenses = data.expenses;
+                    if (data.settings) settings = { ...settings, ...data.settings };
+
+                    saveAppState();
+                    closeModal('settingsModal');
+                    renderPOSCategories();
+                    renderPOSGrid();
+                    renderStockList();
+                    renderExpensesList();
+                    renderBillsList();
+                    renderProfitAnalytics();
+                    showToast('बैकअप सफलतापूर्वक रिस्टोर हो गया!');
+                } catch (err) {
+                    showToast('गलत बैकअप फाइल! कृपया सही JSON फाइल चुनें', 'fa-circle-exclamation text-rose-400');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function confirmClearAllData() {
+            closeModal('settingsModal');
+            document.getElementById('confirmDialogTitle').textContent = 'सारा स्टॉक, खर्च और बिल साफ करें?';
+            document.getElementById('confirmDialogText').textContent = 'इससे सभी आइटम, खर्च और बिल हमेशा के लिए मिट जाएंगे और सॉफ्टवेयर बिल्कुल नया (0) हो जाएगा।';
+            document.getElementById('restoreStockCheckboxWrap').classList.add('hidden');
+
+            const btn = document.getElementById('confirmDialogActionBtn');
+            btn.onclick = function () {
+                products = [];
+                bills = [];
+                expenses = [];
+                cart = [];
+                editingBillId = null;
+                saveAppState();
+                closeModal('confirmDialogModal');
+                renderPOSCategories();
+                renderPOSGrid();
+                renderStockList();
+                renderExpensesList();
+                renderBillsList();
+                renderProfitAnalytics();
+                updateCartUI();
+                showToast('सारा डेटा साफ कर दिया गया');
+            };
+            openModal('confirmDialogModal');
+        }
+
+        // ==========================================
+        // MODAL & TOAST UTILITIES
+        // ==========================================
+        function openModal(id) {
+            const m = document.getElementById(id);
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+        }
+
+        function closeModal(id) {
+            const m = document.getElementById(id);
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+        }
+
+        let toastTimeout = null;
+        function showToast(text, iconClass = 'fa-circle-check text-emerald-400') {
+            const t = document.getElementById('appToast');
+            document.getElementById('appToastIcon').className = `fa-solid ${iconClass} text-sm`;
+            document.getElementById('appToastText').textContent = text;
+            t.classList.remove('hidden');
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                t.classList.add('hidden');
+            }, 3200);
+        }
+    </script>
+</body>
+</html>
